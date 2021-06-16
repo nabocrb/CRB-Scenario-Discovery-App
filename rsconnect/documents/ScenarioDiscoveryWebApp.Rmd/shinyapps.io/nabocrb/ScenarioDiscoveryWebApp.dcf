@@ -1,0 +1,12 @@
+name: ScenarioDiscoveryWebApp
+title: ScenarioDiscoveryWebApp
+username:
+account: nabocrb
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 4046332
+bundleId: 4531230
+url: https://nabocrb.shinyapps.io/ScenarioDiscoveryWebApp/
+when: 1619632566.40503
+asMultiple: FALSE
+asStatic: FALSE

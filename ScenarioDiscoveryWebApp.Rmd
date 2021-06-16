@@ -1,0 +1,2506 @@
+---
+title: "CRB Scenario Discovery"
+author: "Nathan Bonham"
+date: "April 27, 2021"
+output: 
+  flexdashboard::flex_dashboard:
+    source_code: "https://github.com/nabocrb/CRB-Robustness-App-BOR"
+    theme: spacelab
+    navbar:
+      - { icon: "fa-cog", align: right}
+    
+runtime: shiny
+
+---
+
+```{r setup, include=FALSE}
+
+# my sdprim wrapper function
+source("SD function library.R")
+
+### data loaded in SD function library.R
+
+```
+
+
+
+```{r, settings bsModal}
+
+bsModal(id = "settingsModal", title = "Settings", trigger = "openModal", size = "large",
+        
+        
+        h3("Scatter matrix options"),
+        
+        fluidRow(column(width=4, 
+                  sliderInput(inputId = "legendx",label = "legend x position", min = 0.2, max = 0.75,value = 0.4, step = 0.01, width="200px", ticks = F)),
+                 column(width=4, offset = 0,
+                  sliderInput(inputId = "legendy",label = "legend y position", min = 0.7, max = 1,value = 0.94, step = 0.01, width="200px", ticks = F)      
+                   
+                    )
+                 ),
+
+                fluidRow(column(width=4, 
+                  sliderInput(inputId = "scatterLabel", label = "Label font size", min = 10, max = 30, value = 16, step = 0.5,width = "200px", ticks = F)
+                  ),
+                 column(width=4, offset =0,
+                  sliderInput(inputId = "scatterTick", label = "Tick font size", min = 8, max = 26, value = 12, step = 0.5,width = "200px", ticks = F)   
+                    )
+                 ),
+        
+        prettyToggle(inputId = "DiagonalTF",label_on = "Remove kernel density plots", label_off = "Include kernel density plots", value = T),
+        
+        
+        splitLayout(cellWidths = c(320,20),h3("Violin plot download options"), circleButton(inputId = "imageHelp", icon=icon("info-circle"), size = "xs")),
+
+bsTooltip(id="imageHelp", title = "Set height, width, and other parameters when downloading the violin plots (Part 2) as an image. The default height and width produce a .jpeg or .png with 960 dpi that scales nicely on 8.5 x 11 inch paper. The -Label and title scale- may need increased if larger images are downloaded. If .pdf is desired, you can download as .svg then use free online applications to convert from .svg to .pdf. Use these options in conjunction with the label options above to produce quality images.", placement = "right", options=list(container="body")),
+
+splitLayout(cellWidths = c(300,300), 
+            sliderInput(inputId = "height",label = "Image height (px)",min = 100, max=1000, value = 500, width=250, step = 50),
+            sliderInput(inputId = "width",label = "Image width (px)",min = 250, max=2000, value = 500, width=250, step=50)
+            
+            ),
+
+
+splitLayout(cellWidths = c(300,300), 
+            
+            sliderInput(inputId = "scale",label = "Label and title scale",min =1, max=17, value = 10, width=250),
+            radioButtons(inputId = "format", label = "Image format", choices = c("jpeg", "png", "svg", "webp"), selected = "jpeg", width=250, inline=TRUE)
+            
+            )
+        
+          
+        )
+
+
+### toggle modal, for multiple action buttons
+
+modalTrigger=reactiveValues(Obj=0, PT=0)
+
+# observeEvent(input$openModalObj,{
+#   
+#   modalTrigger$Obj=1
+#   modalTrigger$PT=0
+#   
+# })
+
+observeEvent(input$openModalObj, {
+  
+  toggleModal(session = session, modalId = "settingsModal", toggle = "open")
+  
+}, ignoreInit = T)
+
+
+
+
+
+
+
+```
+
+
+```{r, rolling window length Modal}
+
+output$RollingAVGimage=renderImage({
+
+          filename <- normalizePath("images/Rolling AVG.png")
+
+
+          list(src=filename, width="640px", height="570px")
+
+        }, deleteFile = F)
+
+bsModal(id="WindowHelpModal", title = "Measuring streamflow with retrospective observation windows", trigger = "WindowHelp1",
+        
+                renderText("The table below shows an example calculation of the maximum and minimum 5-yr average flow. First, the five year rolling average of the PREVIOUS five years is calculated. For example, the five year rolling average at the end of 2021 is the average of years 2017 to 2021. Then, the maximum and minimum of the 5-yr averages are taken as the uncertainty metrics. We chose to use the previous years of flow, rather the upcoming years, such that the metrics are directly observable and can be implemented in a signpost and adaptation monitoring system. For example, imagine that Scenario Discovery indicates a policy fails performance thresholds when the minimum five year average flow is below 11 MAF. If the policy were implemented in real life and you observe that the average flow over the previous five years is less than 11 MAF, then adaptive action may be needed. Use the dropdown menu to select the window length. If you select -44-, then the uncertainty metric is simply the mean flow over the simulation. If you select -any-, then the Scenario Discovery algorithm will be run with all window lengths. This is not recommended as it is computationally expensive, difficult to plot, and the results may use redundant or difficult-to-interpret metric combinations."),
+        
+        div(style="margin-bottom: 20px"),
+        
+        imageOutput("RollingAVGimage"),
+        
+        div(style="margin-bottom: 150px")
+        
+
+        
+        )
+
+
+```
+
+```{r, Q thresholds modal, out.width = "50%", out.height = "50%"}
+
+        output$Qthreshimage=renderImage({
+
+          filename <- normalizePath("images/QThresh.png")
+
+
+          list(src=filename)
+
+        }, deleteFile = F)
+
+
+output$FreqDurCalcimage=renderImage({
+
+          filename <- normalizePath("images/Duration Frequency example.png")
+
+
+          list(src=filename, width="550px", height="570px")
+
+        }, deleteFile = F)
+
+# filename=normalizePath("images/Vulnerability threshold.png")
+
+
+bsModal(id="QThreshHelpModal", title = "Duration and frequency of high flows and low flows", trigger = "QThreshHelp1",
+#         
+
+
+        renderText("Duration and frequency time-series statistics are used to complement the rolling window statistics, providing a nuanced understanding of how some magnitude of flow can be realized by different frequency and durations of high flow and low flow years. However, quantifying duration and frequency requires us to select thresholds to define high flow and low flow. We define three alternate definitions of low flow and high flow, as shown in the figure below, each of which is based on the observed historical record at Lees Ferry. First, thresholds are defined using averages over renowned historical periods: a low flow is below the average of the drought of recent years (2000-2018), and a high flow is greater than the average of the wet period during which the Colorado River Compact was signed, termed the pluvial period (1906-1931). Second, thresholds are defined with terciles, which Reclamation has used in the past to describe high and low flows. Lastly, the thresholds are defined as the average plus or minus one standard deviation. Use the dropdown menu to select which threshold type to use with Scenario Discovery. Ultimately, Scenario Discovery will indicate which threshold type is most skilled for predicting vulnerability; however, it is important to choose a threshold definition that is understood and accepted by CRB stakeholders."),
+
+        imageOutput("Qthreshimage"),
+        
+        div(style="margin-bottom:900px"),
+
+        renderText("The above figure shows the three threshold types. The vertical axis shows annual stream flow in million-acre feet (maf) from 1906 to 2018, and the horizontal axis is the empirical return period in years."),
+
+        div(style="margin-bottom:20px"),
+
+        renderText("The table below shows an example calculation of duration and frequency for non-high flow years using historical thresholds. First, each year in the flow time-series is labelled as TRUE (high flow) or FALSE  (non-high flow) in the -High flow- column. Next, the -Count non-high- column records the number of consecutive non-high flow years. The maximum duration is the maximum value in this column, highlighted in orange. The average is the average number of years non-high flows persist, or the average of 7 and 3 (shown in green border). Frequency is the count of non-high flow years, or the number of FALSE values (highlighted in blue)."),
+
+div(style="margin-bottom:20px"),
+
+        imageOutput("FreqDurCalcimage"),
+
+div(style="margin-bottom:300px")
+
+        # knitr::include_graphics(filename)
+
+
+
+)
+
+```
+
+```{r, Uncertainty metrics modal}
+
+output$UMtable=renderImage({
+
+          filename <- normalizePath("images/Uncertainty metrics table.png")
+
+
+          list(src=filename, width="570px", height="650px")
+
+        }, deleteFile = F)
+
+bsModal(id = "MetricsHelpModal", title = "Uncertainty metrics", trigger = "MetricsHelp1",
+        
+        renderText("Uncertainty metrics quantify important variables in the Colorado River Basin that we do not control, yet they affect the performance of the system. These metrics are uncertain because we do not know the magnitude of them in the future. The table below summarizes the uncertainty metrics used in this study. Broadly speaking, we consider three sources of uncertainty: annual streamflow at Lees Ferry, AZ, initial system conditions, and water demand. To characterize hydrologic uncertainty, we calculate average annual flow in moving windows from 2 to 20 years in length. Moreover, we calculate duration and frequency metrics to provide a nuanced understanding of how different flow patterns may produce similar average flows. For additional information on the hydrology metrics, please use their information buttons found in the dropdown menu. For initial system conditions, we consider the pool elevations of Lake Mead and Lake Powell. The final metric is demand, which is the volume of water consumed by the Upper Basin states annually. Use this drop down menu to select which annual flow metrics to use in the Scenario Discover algorithm. Note that system condition and demand metrics are always passed to Scenario Discovery."),
+        
+        div(style="margin-bottom:20px"),
+        
+        imageOutput("UMtable"),
+        
+        div(style="margin-bottom:220px")
+        
+        )
+
+```
+
+```{r, density vs coverage Modal}
+
+output$CoverageDensity=renderImage({
+  
+            filename <- normalizePath("images/DensityCoverage.png")
+
+
+          list(src=filename, width="570px", height="300px")
+  
+}, deleteFile = F)
+
+bsModal(id="PTModal", title = "Peeling trajectory, density, and coverage",trigger = "openPTModal", 
+          
+        renderText("The peeling trajectory plot is a scatter plot of density versus coverage, where each point is one scenario box found with the Scenario Discovery algorithm. Density and coverage are two metrics of scenario quality, the definitions of which are depicted in the figure below. Each plot shows States of The World plotted in two-dimensional space, where those two dimensions are uncertainty metrics. The SOW are colored according to if they are vulnerable (failed performance thresholds) or not vulnerable (met performance thresholds). The red boxes represent scenarios, describing the upper and lower limits of uncertainty metrics that describe the characteristics of SOW where performance thresholds are transgressed. The scenario box in the left plot has perfect density and coverage, capturing only and all of the vulnerable cases. In this ideal case, both density and coverage equal 1. The middle plot shows perfect coverage because all vulnerable cases are contained in the box, but imperfect density because there exists non-vulnerable cases in the box. The plot on the right shows the opposite case of perfect density, but coverage less than one. Keep in mind that SOW have more than two uncertainty metrics, and thus the scenario boxes can also exceed two-dimensions, although scenarios with fewer dimensions are generally more interpretable."),
+        
+        div(style="margin-bottom: 10px"),
+        
+        renderText("It is your job to choose a scenario box by clicking on a point in the peeling trajectory. The scenarios will exhibit tradeoffs between density, coverage, and the number of uncertainty metrics used, so use the peeling trajectory along with the scenario box plots to the right to explore."),
+        
+        div(style="margin-bottom: 30px"),
+        
+          imageOutput("CoverageDensity")
+          
+          )
+
+```
+
+
+```{r, manual thresholds modal}
+
+bsModal(id = "ThresholdsModal", title = "Set thresholds with the sliders below", trigger = "openManualThresh",
+
+    renderUI({
+    req(length(input$PlotObj) >=1)
+    sliderInput("Thresh1", label=paste0(input$PlotObj[1], " threshold"), min=min(obj_all[[input$PlotObj[1]]]),
+                max=max(obj_all[[input$PlotObj[1]]]), value=max(obj_all[[input$PlotObj[1]]]))
+    }),
+    
+    renderUI({
+    req(length(input$PlotObj) >=2)
+    sliderInput("Thresh2", label=paste0(input$PlotObj[2], " threshold"), min=min(obj_all[[input$PlotObj[2]]]),
+                max=max(obj_all[[input$PlotObj[2]]]), value=max(obj_all[[input$PlotObj[2]]]))
+    }),
+    
+    renderUI({
+    req(length(input$PlotObj) >=3)
+    sliderInput("Thresh3", label=paste0(input$PlotObj[3], " threshold"), min=min(obj_all[[input$PlotObj[3]]]),
+                max=max(obj_all[[input$PlotObj[3]]]), value=max(obj_all[[input$PlotObj[3]]]))
+    }),
+    
+    renderUI({
+    req(length(input$PlotObj) >=4)
+    sliderInput("Thresh4", label=paste0(input$PlotObj[4], " threshold"), min=min(obj_all[[input$PlotObj[4]]]),
+                max=max(obj_all[[input$PlotObj[4]]]), value=max(obj_all[[input$PlotObj[4]]]))
+    }),
+    
+    renderUI({
+    req(length(input$PlotObj) >=5)
+    sliderInput("Thresh5", label=paste0(input$PlotObj[5], " threshold"), min=min(obj_all[[input$PlotObj[5]]]),
+                max=max(obj_all[[input$PlotObj[5]]]), value=max(obj_all[[input$PlotObj[5]]]))
+    }),
+
+    renderUI({
+    req(length(input$PlotObj) >=6)
+    sliderInput("Thresh6", label=paste0(input$PlotObj[6], " threshold"), min=min(obj_all[[input$PlotObj[6]]]),
+                max=max(obj_all[[input$PlotObj[6]]]), value=max(obj_all[[input$PlotObj[6]]]))
+    }),
+
+    renderUI({
+    req(length(input$PlotObj) >=7)
+    sliderInput("Thresh7", label=paste0(input$PlotObj[7], " threshold"), min=min(obj_all[[input$PlotObj[7]]]),
+                max=max(obj_all[[input$PlotObj[7]]]), value=max(obj_all[[input$PlotObj[7]]]))
+    }),
+
+    renderUI({
+    req(length(input$PlotObj) >=8)
+    sliderInput("Thresh8", label=paste0(input$PlotObj[8], " threshold"), min=min(obj_all[[input$PlotObj[8]]]),
+                max=max(obj_all[[input$PlotObj[8]]]), value=max(obj_all[[input$PlotObj[8]]]))
+    }),
+
+    renderUI({
+    req(length(input$PlotObj) >=9)
+    sliderInput("Thresh9", label=paste0(input$PlotObj[9], " threshold"), min=min(obj_all[[input$PlotObj[9]]]),
+                max=max(obj_all[[input$PlotObj[9]]]), value=max(obj_all[[input$PlotObj[9]]]))
+    }),
+    
+    renderUI({
+      req(length(input$PlotObj) >=1)
+      actionButton(inputId = "COImanual", label = "Apply thresholds & plot", width = "35%")
+      
+    })
+
+
+
+        )
+
+
+```
+
+
+
+
+Introduction 
+=================================================
+
+### 
+
+```{r, intro figure}
+
+output$IntroFig=renderImage({
+
+          filename <- normalizePath("images/Overview.png")
+
+
+          list(src=filename, width="1485px", height="860px")
+
+        }, deleteFile = F)
+
+fluidRow(column(width=11, offset = 1,
+        imageOutput("IntroFig")        
+                ))
+
+absolutePanel(
+  
+  actionButton(inputId = "RobustnessApp",label = "Open robustness app", onclick="location.href='https://nabocrb.shinyapps.io/CRB-Robustness-App-Shiny-Contest';", width = "110%"),
+  
+  class = "panel panel-default", fixed = T,
+                draggable = TRUE, top = "auto", bottom=20, left = 10, right = "auto",
+                width = '8%', height = 'auto',
+                style = "style = z-index: 400"
+  
+)
+
+```
+
+
+
+1. Define vulnerability thresholds { data-orientation=columns}
+==================================================
+
+Column {data-width=300}
+-----------------------
+
+### Part 1: Select policy, uncertainty metrics, and objectives to plot {data-height=200}
+
+```{r}
+
+# data-navmenu="Scenario Discovery-1"
+
+sidebarPanel(width=5, style={"margin-left: -20px; margin-right: -15px"},
+  
+selectInput(inputId = "policyID",label = "Select policy ID", choices = 1:nrow(wide_data)),
+
+selectInput(inputId = "policyIDcompare",label = "Select policy(s) to compare", choices = c(1:nrow(wide_data)), selected = NULL, multiple = T),
+
+
+fluidRow(column(width=9, #fluidRow for dropdown button
+
+           dropdownButton(circle = F, label = "Choose uncertainty metrics",width = "150%",inputId = "UMdropdown",
+
+fluidRow(column(width=10,
+            selectInput(inputId = "Window", label = "Select rolling window length (years)",choices = c("2", "5", "8", "10", "20", "44", "any"), selected = "10")
+                ),
+         column(width = 1, offset = 0,
+            circleButton(inputId = "WindowHelp1", icon = icon("info-circle"), size = "xs")
+                )
+         ),
+
+
+h5("Include duration and frequency metrics?"),
+
+  fluidRow(column(width=10,
+
+           prettyToggle(inputId = "DurFreq",label_on = "Include",label_off = "Exclude", value = TRUE)
+
+                ),
+         column(width = 1, offset = 0,
+            circleButton(inputId = "QThreshHelp1", icon = icon("info-circle"), size = "xs")
+                )
+         ),
+
+
+
+renderUI({
+  req(input$DurFreq==TRUE)
+              selectInput(inputId = "QThreshType",label = "High vs low flow year definition type", choices = c("historical", "terciles", "mean & standard deviation"), selected = "historical")
+
+}),
+
+    renderUI({selectInput("PlotMetrics",label="Select uncertainty metrics to plot", multiple = T, choices=colnames(x$x))})
+
+               ) # end drop down button
+
+
+
+) # end column for dropdownButton
+
+
+                , # end column for dropDownbutton
+         column(width = 1, offset = 0,
+            circleButton(inputId = "MetricsHelp1", icon = icon("info-circle"), size = "xs", style="margin-left:20px")
+                )), # end fluidRow for dropdownButton and info button
+
+div(style="margin-bottom:10px"), # adds padding between buttons
+
+selectInput(inputId = "SOWensemble", label = "Choose SOW ensemble", choices = c("cLHS 300", "cLHS 500"), selected = "cLHS 500"),
+
+selectInput("PlotObj",label="Select objectives to plot", multiple = T, choices=colnames(obj_all)[-c(1,2)]),
+
+radioButtons(inputId = "AndOr", label = "Condition for multiple objectives", choices = c("Or", "And"), inline = T)
+
+         ) # end sidebarPanel
+
+bsTooltip(id = "AndOr",title = "In the case you have set thresholds on multiple objectives, define whether vulnerability is defined by the union (Or) or intersection (And) of the thresholds. For -Or-, an SOW is classified as vulnerable if either of the thresholds are violated (expect more vulnerable cases). For -And-, an SOW is classified as vulnerable if both thresholds are violated (expect less vulnerable cases).", placement = "right", options=list(container="body"))
+
+
+output$DVplot=renderPlotly({
+  
+        if (isTruthy(input$policyIDcompare)){
+          IDs=c(input$policyID, input$policyIDcompare)
+        } else {
+          IDs=input$policyID
+        }
+  
+  
+        DV_plot(to_plot=IDs, metric_label="order", preferred_direction="min", y_axis2=F)
+  
+      })
+
+mainPanel(width = 7,
+          plotlyOutput("DVplot", height="auto")
+          )
+
+####################### tooltips ###########################
+
+# bsTooltip(id = "UMdropdown", title = "Select uncertainty metrics for use in the Scenario Discovery algorithm and for plotting in the scatter matrix to the right. See the tooltips and information buttons for each user entry for more.", placement = "right", options=list(container="body") )
+
+bsTooltip(id="DurFreq", title = "These metrics measure both the duration and frequency of high flow years, low flow years, and non-high flow years. One of three different types of thresholds can be selected to define high flow vs low flow. Please use the information button to the right for descriptions of the thresholds and metrics.",  placement = "right", options=list(container="body") )
+
+bsTooltip(id="PlotMetrics", title = "Choose metrics to plot in the scatter matrix to the right. Please note that the metrics chosen here only affect the plot, but all metrics with the chosen window length high/low flow definition type are inputs to the Scenario Discovery algorithm.",  placement = "right", options=list(container="body"))
+
+bsTooltip(id="policyID", title = "Choose the policy ID you desire to perform Scenario Discovery on.", placement = "right", options=list(container="body") )
+
+bsTooltip(id = "policyIDcompare", title = "You may select additional policies to compare to the policy selected above. They are plotted both in the decision variable plot to the right and the violin plots below.",  placement = "right", options=list(container="body"))
+
+bsTooltip(id = "PlotObj", title = "Select optimization objectives. In Part 2 below, you can select performance thresholds that define acceptable [not vulnerable] from unacceptable [vulnerable] performance Moreover, these objectives are plotted in the scatter plot matrix to the right.",  placement = "right", options=list(container="body"))
+
+```
+
+
+### 
+```{r, violin plots}
+
+fluidRow(column(width = 10, offset = 0,
+              h5("Part 2: Select performance thresholds by moving the dashed black lines", style="margin-top: 3px; 
+                 margin-bottom: 8px")  
+              ),
+         column(width=1, offset=1,
+    circleButton(inputId = "openManualThresh", icon = icon("sliders-h"), size = "xs")
+                )
+         
+         )
+bsTooltip(id = "openManualThresh", title = "Instead of interacting with the violin plots directly, define thresholds manually by clicking this button. Please make sure to select objectives first.", options=list(container="body"), placement = "right")
+
+hr(style="margin-botom: 0px; margin-top: 0px; margin-left: -10px", width="110%")
+
+update=reactiveValues(thresholds=0, PRIMalg=0, ensemble=0, policy=0, policy2=0, thresholds2=0, ensemble2=0, AndOr=0, AndOr2=0, currentEnsemble="cLHS 500", currentAlg=F, currentPolicy=1, currentAndOr="Or") # used to place asterisks on plots and tables that need updated, and the corresponding buttons to perform the update
+
+observeEvent(input$policyID !=update$currentPolicy, { # want to ignore initiliaztion for the update trigger
+  
+  # cat(file=stderr(), 'ensembles:', c(input$SOWensemble, update$currentEnsemble), "\n")
+  
+  req(input$policyID !=update$currentPolicy)
+  
+  update$policy=1
+  update$policy2=1
+  
+  update$currentPolicy=input$policyID
+
+}, ignoreInit = T)
+
+observeEvent(input$AndOr !=update$currentAndOr, { # want to ignore initiliaztion for the update trigger
+
+
+  req(input$AndOr !=update$currentAndOr)
+  
+  update$AndOr=1
+  update$AndOr2=1
+  
+  update$currentAndOr=input$AndOr
+
+}, ignoreInit = T)
+
+
+observeEvent(list(update$thresholds, update$ensemble, update$policy, update$AndOr),{
+  
+  #cat(file=stderr(), 'your name:', c(update$thresholds, update$ensemble), "\n")
+  
+  update$COIbutton=ifelse(
+    sum(update$thresholds, update$ensemble, update$policy, update$AndOr)>0,
+    "*Apply thresholds & plot*",
+    "Apply thresholds & plot"
+  )
+  
+})
+
+fluidRow(
+
+  column(width=3,
+  renderUI({
+  
+  actionButton('COIButton',label=update$COIbutton, width="140%", style="margin-right: 0px; margin-top:-5px")  
+  })      
+    ),
+
+  column(width=3, offset=1,
+
+         div(style="margin-top: -5px",
+          
+         dropdownButton(circle = F,label = "Round threshold to nearest:", width = "150%", margin = "10px",
+
+                        radioButtons(inputId = "RoundTo", label = NULL, choices = c("no rounding","0.01", "0.1", "1", "10", "100"),selected = "no rounding")
+
+                        )
+         
+                )
+
+         ),
+
+
+  column(width=3, offset=1,
+  actionButton("ResetThresholds", label="Reset all thresholds", width="120%", style="margin-left: 25px; margin-top:-5px")
+  )
+  )
+
+
+names=colnames(obj_all)[-c(1,2)]
+  my_units=c("KAF", "KAF", "%", "%", "%", "Yrs", "%", "KAF", "MAF")
+units.df=data.frame(matrix(nrow=1, ncol=length(my_units)))
+colnames(units.df)=names
+units.df[1,]=my_units
+
+
+output$VP= renderPlotly({
+
+  validate(need(input$PlotObj, "Select objectives to plot"))
+
+  input$ResetThresholds # reset lines if Reset all thresholds button is hit
+  input$COImanual #reset lines if manual thresholds are entered
+  
+  
+  data=dplyr::filter(x$obj, ID %in% input$policyID)
+
+  units=as.vector(units.df[,input$PlotObj])
+
+  y_vec=vector(length = length(input$PlotObj))
+
+  
+  thresh_temp=isolate(thresholds$thresholds)  # need to isolate so violin plots are not redrawn every time the threshold line is moved
+  obj_temp=isolate(thresholds$objectives)
+
+
+for(i in 1:length(input$PlotObj)){
+
+  if(input$PlotObj[i] %in% obj_temp){
+    y_vec[i]=thresh_temp[which(obj_temp==input$PlotObj[i])]
+  } else {
+    y_vec[i]=max(data[,input$PlotObj[i]])
+  }
+
+}
+  add_to_title=""
+  if(isTruthy(input$policyIDcompare)){
+
+    policyIDs=input$policyIDcompare
+
+    TF=T
+
+    for(i in 1:length(input$policyIDcompare)){
+      if(i==1){
+        add_to_title=paste0(", ",input$policyIDcompare[i])
+
+      } else {
+
+        add_to_title=paste0(add_to_title, add_to_title=paste0(", ",input$policyIDcompare[i]))
+
+      }
+
+
+    }
+
+
+
+  } else {
+    policyIDs=NULL
+    TF=F
+  }
+
+  a=violin_subplots(obj = data, source = "VP", obj_names = input$PlotObj, unit_vec =units, y_vec =  y_vec, policyID=policyIDs,
+      color_vec = c("blue", "gray", "pink", "red", "brown", "red"),  objectives_all=x$obj, add_traces=TF, firstpolicy=input$policyID, img_height=input$height, img_width=input$width, img_scale=input$scale,
+                         img_format=input$format)
+
+  a= a %>%layout(title=list(text=paste0("policy ID: ", input$policyID, add_to_title), y=0.98), margin=list(b=80,t=35,pad=0))
+  a
+  
+  
+})
+
+plotlyOutput("VP")
+
+```
+
+```{r, add thresholds to violin plots}
+
+thresholds=reactiveValues(objectives=NA, thresholds=NA, ManualThresholdsTrigger=0)
+
+observeEvent(eventExpr = event_data("plotly_relayout", source = "VP"),{
+  
+  temp=event_data("plotly_relayout", source = "VP")
+  
+  ignore_check=names(temp)[1] #ignore all plotly relayout events that are NOT moving the line. When
+  # the line is moved, the first element starts with shapes
+  
+  req(startsWith(ignore_check, "shapes[")) # ignore other types of relayout events
+  
+  tempIndex=regmatches(ignore_check, gregexpr("\\[.+?\\]", ignore_check))
+  index=as.numeric(substr(x = tempIndex, start = 2, stop = 2))# extract the index from between the brackets
+  input_names=isolate(input$PlotObj)
+  metric= input_names[index+1] # plus one for JS 0 index to R 1 index
+  
+  req(isTruthy(temp[[3]]))
+  
+  y=temp[[3]] # the third element corresponds to y0, ie the performance threshold
+  
+  ### round y to nearest [] based on user input
+  
+  RoundTo=isolate(input$RoundTo)
+  
+  if(RoundTo == "no rounding"){
+    #nothing
+  } else if(RoundTo=="0.01"){
+    y=round(y, 2)
+  } else if (RoundTo=="0.1"){
+    y=round(y, 1)
+  } else if (RoundTo=="1"){
+    y=round(y)
+  } else if (RoundTo=="10"){
+    y=round(y, -1)
+  } else if (RoundTo=="100"){
+    y=round(y, -2)
+  } else {
+    #nothing
+  }
+  
+
+  # add objective and threshold
+  
+  if(is.na(thresholds$thresholds[1])){
+    thresholds$thresholds=y
+    thresholds$objectives=metric
+    
+  } else if(metric %in% thresholds$objectives) {
+    
+    i=which(thresholds$objectives==metric)
+    thresholds$thresholds[i]=y
+    
+  } else {
+    
+    thresholds$thresholds=c(thresholds$thresholds, y)
+    thresholds$objectives=c(thresholds$objectives,metric)
+  
+  }
+  
+  
+  update$thresholds=1
+  update$thresholds2=1
+
+}, ignoreInit = T, ignoreNULL = T)
+
+
+observeEvent(input$PlotObj, { # check if user has removed any objectives. If so, remove from threholds$objectivs and $thresholds
+  
+  #     cat(file=stderr(), 'length thresholds$objectives', length(thresholds$objectives), "\n") # prints dimension to R console
+  # cat(file=stderr(), 'length input$PlotObj', length(input$PlotObj), "\n") # prints dimension to R console
+  # 
+  # 
+
+  if(length(thresholds$objectives) > length(input$PlotObj) ){ # user has removed objectives, need to remove from thresholds$objectives
+    
+    
+    removeIndex=which(!(thresholds$objectives %in% input$PlotObj))
+    thresholds$objectives=thresholds$objectives[-removeIndex]
+    thresholds$thresholds=thresholds$thresholds[-removeIndex]
+
+  }
+  
+})
+
+observeEvent(input$ResetThresholds, {
+  
+  # req(thresholds$objectives)
+  
+  data=dplyr::filter(obj_all, ID %in% input$policyID)
+
+  thresholds$objectives=NULL
+  thresholds$thresholds=NULL
+  thresholds$objectives=NA
+  thresholds$thresholds=NA
+  
+  y$COI=NULL
+  y$nCOI=0
+  y$nonCOI=length(y$COI)
+
+  #update$thresholds=0
+  
+})
+
+
+
+```
+
+
+Column {.tabset .tabset-fade}
+------------------------
+
+### Uncertainty metrics
+
+```{r, uncertainty metrics pairs plot}
+
+
+renderPlot({
+
+  data=x$x
+
+  validate(need(y$COI, "Use the violin plots to define vulnerability thresholds."))
+  validate(need(y$Trigger==1, "Use the violin plots to define vulnerability thresholds."))
+  validate(need(input$PlotMetrics, "Select uncertainty metrics."))
+   validate(need(length(input$PlotMetrics)>1, "Select at least one more metric."))
+     validate(need(length(y$COI)==nrow(obj$filter), "Apply thresholds after changing SOW ensemble."))
+
+  # req(y$Trigger==1)
+  yCOI=y$COI
+  Vulnerable=ifelse(yCOI==1, "Yes", "No")
+
+  data$Vulnerable=Vulnerable
+
+  labelSize=input$scatterLabel
+  tickSize=input$scatterTick
+  
+  diagInput=if(input$DiagonalTF==T){list(continuous = modified_density)} else {list(continuous = "blankDiag")}
+  
+  pairs_UM=ggpairs(data=data, columns = input$PlotMetrics,
+        aes(color=Vulnerable, alpha=0.3),
+        lower = list(continuous=modified_points),
+        upper=list(continuous = "blank"), legend=NULL, switch="both", title="Vulnerable SOW",
+        diag = diagInput)+
+        theme(text=element_text(size=labelSize))
+
+  pairs_UM=pairs_UM+theme(axis.text.x = element_text(angle=90, size=tickSize), axis.text.y = element_text(size=tickSize))
+
+  temp_UM=pairs_UM[2,1] # extract plot to steal legend from
+
+  temp_UM=temp_UM+theme(legend.key = element_rect(fill = "transparent", colour = "transparent"),
+                rect = element_rect(fill = "white")) # make legend background transparent
+
+  legend_UM=get_legend(temp_UM) #steal legend
+  legend_UM=as_ggplot(legend_UM) # convert to ggplot
+
+  x=input$legendx
+  y=input$legendy
+  
+  if( input$DiagonalTF==F){
+      pairs_UM=gpairs_lower(pairs_UM) # remove extra labels when diagonal not wanted
+  }
+  
+  vp_UM=viewport(width = 1, height=2, x=x, y=y) # viewport for legend
+  print(pairs_UM)
+  print(legend_UM, vp=vp_UM)
+
+
+})
+
+
+
+
+
+```
+
+```{r, absolute panel Uncertainty metrics}
+
+# create the table displayed in the absolute panel
+
+observe({
+  
+  c1=c(thresholds$objectives, "And/Or condition")
+  c2=c(thresholds$thresholds, input$AndOr)
+  
+  thresholds$table=data.frame(objective=c1, threshold=c2)
+  # thresholds$table=data.frame(objective=thresholds$objectives, threshold=thresholds$thresholds)
+  
+
+})
+
+observeEvent(list(update$thresholds, update$ensemble, update$policy, y$nCOI), {
+  
+  update$SOWFraction=ifelse(sum(update$thresholds, update$ensemble, update$policy)>0,
+                            paste0("*",y$nCOI, " / ", nrow(x$x), "*"),
+         paste0(y$nCOI, " / ", nrow(x$x)))
+})
+
+absolutePanel(class = "panel panel-default", fixed = T,
+                draggable = TRUE, top = 100, left = "auto", right = 20, bottom = "auto",
+                width = '15%', height = 'auto',
+                style = "overflow-y:scroll; max-height: 1000px; opacity: 0.9; style = z-index: 400",
+
+              h4(strong("Vulnerability statistics")),
+              
+                 HTML('<button data-toggle="collapse"  data-target="#box2" class="btn-block btn-primary">Objective: threshold</button>'),
+   tags$div(id = 'box2', class="collapse in",
+
+      renderTable(thresholds$table)
+      
+      ),
+
+      HTML('<button data-toggle="collapse" data-target="#box1" class="btn-block btn-primary">Number of vulnerable SOW</button>'),
+      tags$div(id = 'box1', class="collapse in", align="center", style="margin-bottom: 10px",
+
+               
+        renderText(update$SOWFraction)),
+
+   tags$div(id="buttonUM", align="center",
+            
+            div(style="margin-bottom:5px"),
+            actionButton(inputId= "openModal",label = "Open plot settings", icon=icon("cog"), width = "160px"),
+            div(style="margin-bottom:5px"),
+            
+            # renderUI({
+            #   
+            #   req(y$COI)
+            # 
+            #   actionButton(inputId = "gotoSD1",label = "Go to Scenario Discovery", onclick="location.href='#section-perform-scenario-discovery';", width = "180px")
+            #   
+            #   # actionButton(inputId = "gotoSD1",label = "Go to Scenario Discovery", onclick="location.href='#section-b-perform-scenario-discovery';", width = "180px")
+            #     
+            # }),
+            
+            div(style="margin-bottom:5px")
+            
+            )
+   
+
+   #,
+
+
+      # HTML('<button data-toggle="collapse" data-target="#box3" class="btn-block btn-danger">spinny thing</button>'),
+      # tags$div(id = 'box3', class="collapse in",
+      # 
+      #     p %>% layout(height=200)
+      # )
+
+   )
+
+
+```
+
+### Objectives
+
+
+```{r, objectives pairs plot}
+
+
+renderPlot({
+  
+  data=obj$filter[-c(1,2)]
+
+  validate(need(y$COI, "select vulnerability thresholds."))
+  validate(need(y$Trigger==1, "select vulnerability thresholds."))
+  validate(need(input$PlotObj, "select at least two objectives."))
+  validate(need(length(input$PlotObj)>1, "select at least two objectives to plot."))
+  validate(need(length(y$COI)==nrow(obj$filter), "Apply thresholds after changing SOW ensemble."))
+  # req(y$Trigger==1)
+  yCOI=y$COI
+  Vulnerable=ifelse(yCOI==1, "Yes", "No")
+  
+  data$Vulnerable=Vulnerable
+  
+  labelSize=input$scatterLabel
+  tickSize=input$scatterTick
+  
+  diagInput=if(input$DiagonalTF==T){list(continuous = modified_density)} else {list(continuous = "blankDiag")}
+  
+  pairs_obj=ggpairs(data=data, columns = input$PlotObj,
+        aes(color=Vulnerable, alpha=0.3),
+        lower = list(continuous=modified_points),
+        upper="blank", legend=NULL, switch="both", title="Vulnerable SOW",
+        diag = diagInput)+
+        theme(text=element_text(size=labelSize))
+  
+  pairs_obj=pairs_obj+theme(axis.text.x = element_text(angle=90, size=tickSize), axis.text.y = element_text(size=tickSize))
+  
+  temp_obj=pairs_obj[2,1] # extract plot to steal legend from
+
+  temp_obj=temp_obj+theme(legend.key = element_rect(fill = "transparent", colour = "transparent"),
+                rect = element_rect(fill = "white")) # make legend background transparent
+
+  legend_obj=get_legend(temp_obj) #steal legend
+  legend_obj=as_ggplot(legend_obj) # convert to ggplot
+
+  x=input$legendx
+  y=input$legendy
+  
+  if( input$DiagonalTF==F){
+      pairs_obj=gpairs_lower(pairs_obj) # remove extra labels when diagonal not wanted
+  }
+  
+  vp_obj=viewport(width = 1, height=2, x=x, y=y) # viewport for legend
+  print(pairs_obj)
+  print(legend_obj, vp=vp_obj)
+  
+
+})
+
+  
+
+```
+
+```{r, absolute panel Objectives}
+
+absolutePanel(class = "panel panel-default", fixed = T,
+                draggable = TRUE, top = 100, left = "auto", right = 20, bottom = "auto",
+                width = '15%', height = 'auto',
+                style = "overflow-y:scroll; max-height: 1000px; opacity: 0.9; style = z-index: 400",
+
+              h4(strong("Vulnerability statistics")),
+              
+         HTML('<button data-toggle="collapse" data-target="#boxObj2" class="btn-block btn-primary">Objective: threshold</button>'),
+   tags$div(id = 'boxObj2', class="collapse in",
+
+      renderTable(thresholds$table)
+      
+      ),
+   
+
+      HTML('<button data-toggle="collapse" data-target="#boxObj1" class="btn-block btn-primary">number of vulnerable SOW</button>'),
+      tags$div(id = 'boxObj1', class="collapse in", align="center", style="margin-bottom: 10px",
+
+        renderText(update$SOWFraction)),
+
+
+   
+   tags$div(id="buttonObj", align="center",
+            
+            div(style="margin-bottom:5px"),
+            actionButton(inputId= "openModalObj",label = "Open plot settings", icon=icon("cog"), width = "160px"),
+            div(style="margin-bottom:5px")
+            )
+   
+   
+   
+   #,
+
+
+           # HTML('<button data-toggle="collapse" data-target="#box3" class="btn-block btn-danger">spinny thing</button>')#,
+      # tags$div(id = 'box3', class="collapse in",
+      #
+      #     p %>% layout(height=200)
+      # )
+
+   )
+
+
+```
+
+
+2. Perform Scenario Discovery { data-orientation=columns}
+===========================================
+
+```{r SD plot settings modal}
+
+# data-navmenu="Scenario Discovery-1"
+
+bsModal(id = "PlotSettingsSD", title = "Scenario Discovery settings",trigger = "OpenPlotSettingsSD",
+        
+        h3("Scenario Discovery algorithm"),
+        
+        hr(),
+
+        h5("Choose PRIM algorithm type:"),
+prettyToggle(inputId = "PRIMType",label_on = "normal PRIM",label_off = "multi-objective PRIM", value = FALSE),
+
+        sliderInput(inputId = "QPval",label = "multi-objective PRIM p-value", min = 0.01, max = 0.5, value = 0.1, ticks = F, width="200px"),
+
+        h3("Scenario boxes plot settings"),
+
+        hr(),
+
+        fluidRow(column(width = 5,
+                  prettyToggle(inputId = "PlotSignificant", label_on = "Plot all metrics selected", label_off = "Plot only significant metrics", value = F) ),
+                 column(width = 5,
+                  prettyToggle(inputId = "SDDiagonalTF",label_on = "Remove kernel density plots", label_off = "Include kernel density plots", value = T)    )
+                 ),
+
+fluidRow(column(width=4, 
+                  sliderInput(inputId = "SDlegendx",label = "legend x position", min = 0.05, max = 0.75,value = 0.4, step = 0.01, width="200px", ticks = F)),
+                 column(width=4, offset = 0,
+                  sliderInput(inputId = "SDlegendy",label = "legend y position", min = 0.05, max = 1,value = 0.94, step = 0.01, width="200px", ticks = F)      
+                   
+                    )
+                 ),
+
+                fluidRow(column(width=4, 
+                  sliderInput(inputId = "SDscatterLabel", label = "Axis label font size", min = 10, max = 30, value = 16, step = 0.5,width = "200px", ticks = F)
+                  ),
+                 column(width=4, offset =0,
+                  sliderInput(inputId = "SDscatterTick", label = "Tick font size", min = 8, max = 26, value = 12, step = 0.5,width = "200px", ticks = F)   
+                    )
+
+                 
+                 ),
+
+
+       sliderInput(inputId = "RangePlotFont",label = "Metric constraint font size", min = 2, max = 10, value = 5, step = 1 , width="30%", ticks = F)
+                        
+
+        
+        )
+
+observeEvent(input$PRIMType !=update$currentAlg, { # want to ignore initiliaztion for the update trigger
+  
+  # cat(file=stderr(), 'ensembles:', c(input$SOWensemble, update$currentEnsemble), "\n")
+  
+  req(input$PRIMType !=update$currentAlg)
+  
+  update$PRIMalg=1
+
+  update$currentAlg=input$PRIMType
+
+}, ignoreInit = T)
+
+
+bsTooltip(id = "PRIMType", title = "Multi-objective PRIM differs from normal PRIM first by using only the metrics that pass a p-value statistical significance test. Further, it explicitly considers the objective to minimize the number of metrics used by testing all possible metric combinations for 1 to N number of significant metrics.", placement = "right", options=list(container="body"))
+
+bsTooltip(id = "QPval", title = "Select the p-value threshold metrics must satisfy to be used with multi-objective PRIM. A higher p-value generally results in more metrics being used, but with more potential for over-fitting the data.", placement = "right", options=list(container="body"))
+
+```
+
+
+
+Column {data-width=225}
+----------------------
+
+```{r}
+obj=reactiveValues(filter= dplyr::filter(obj_all, ID %in% 1))
+
+observeEvent(list(input$policyID, input$SOWensemble) , {
+  
+  obj$filter=dplyr::filter(obj_all, ID %in% input$policyID)
+  
+  if(input$SOWensemble=="cLHS 300"){
+    
+    obj$filter=obj$filter[SOW_500_300_100[[2]]$model,]
+  
+  }
+}, ignoreNULL = T, ignoreInit = T)
+
+
+```
+
+### {data-height=225}
+
+```{r, user interface, include=TRUE}
+
+
+observeEvent( list(update$thresholds2, update$PRIMalg, update$ensemble2, update$policy2, update$AndOr2) ,{
+
+  update$SDButton=ifelse(sum(update$thresholds2, update$PRIMalg, update$ensemble2, update$policy2, update$AndOr2)>0,
+         "*Perform scenario discovery",
+                         "Perform scenario discovery")
+
+})
+
+sidebarPanel(width=5, style={"margin-left: -20px; margin-right: -20px; margin-top: 0px; margin-bottom: 0px"},
+     
+  # h4(strong("Scenario Discovery"), style="margin-top: -10px"), 
+  
+  # actionButton(inputId = "OpenModalSD", width="230px", label="Scenario Discovery settings", icon = icon("cog")),
+  
+  # circleButton(inputId = "OpenModalSD", icon = icon("cog"), size = "sm"),
+  
+  # div(style="margin-bottom:20px"),
+  
+  renderUI({
+    actionButton(inputId = "SDButton",label = update$SDButton, width = "98%")
+  }),
+  
+  div(style="margin-bottom:20px"),
+  
+  # h4(strong("Plot settings"),  style="margin-top: 10px"),
+  
+  actionButton(inputId = "OpenPlotSettingsSD", width="98%", label="PRIM and plot settings", icon = icon("cog")),
+  
+  div(style="margin-bottom:20px"),
+  
+  renderUI({
+    req(box$ID)
+    
+    textInput(inputId = "ScenarioName", placeholder = "eg. Policy 7, 10yr, high density", label = "Enter scenario name to save", width = "230px" )
+    
+  }),
+  
+  renderUI({
+    
+    req(input$ScenarioName)
+    req(box$ID)
+    
+    actionButton(inputId = "SaveScenario", label = "Save analysis", width = "98%", icon = icon("save"))
+    
+  })
+
+                )
+
+algorithm=reactiveValues()
+observeEvent(input$PRIMType, {
+  
+  if(input$PRIMType==FALSE){
+    algorithm$name="multi-objective PRIM"  
+  } else {
+    algorithm$name="normal PRIM"
+  }
+  
+})
+
+mainPanel(width=7,
+          
+  h4(strong("Vulnerability statistics")),
+
+  HTML('<button data-toggle="collapse" data-target="#boxPTa" class="btn-block btn-primary">Policy ID</button>'),
+      tags$div(id = 'boxPTa', class="collapse in", align="center",
+
+        renderText(as.character(input$policyID))),
+  
+  
+  
+       HTML('<button data-toggle="collapse" data-target="#boxPT4" class="btn-block btn-primary">SOW ensemble</button>'),
+   tags$div(id = 'boxPT4', class="collapse in", align="center",
+
+      renderText(input$SOWensemble)),
+  
+     HTML('<button data-toggle="collapse" data-target="#boxPT2" class="btn-block btn-primary">Objective: threshold</button>'),
+   tags$div(id = 'boxPT2', class="collapse in",
+
+      renderTable(thresholds$table)),
+  
+  HTML('<button data-toggle="collapse" data-target="#boxPT" class="btn-block btn-primary">number of vulnerable SOW</button>'),
+      tags$div(id = 'boxPT', class="collapse in", align="center",
+
+        renderText(update$SOWFraction)),
+
+
+  
+     HTML('<button data-toggle="collapse" data-target="#boxPT3" class="btn-block btn-primary">Scenario Discovery algorithm</button>'),
+   tags$div(id = 'boxPT3', class="collapse in", align="center",
+
+      renderText(algorithm$name))
+  
+  
+  )
+
+
+# fluidRow(column(width=5,
+#   
+#   div(style="margin-bottom:40px"),              
+#                 
+#   actionButton(inputId = "OpenModalSD", width="230px", label="Scenario Discovery settings", icon = icon("cog")),
+#   
+#   # circleButton(inputId = "OpenModalSD", icon = icon("cog"), size = "sm"),
+#   
+#   div(style="margin-bottom:20px"),
+#   
+#   actionButton(inputId = "SDButton",label = "Perform scenario discovery", width = "230px")             
+#                 
+#                 ),
+#   column(width=7, offset=0,
+#          
+#   h4(strong("Vulnerability statistics")),
+# 
+#   HTML('<button data-toggle="collapse" data-target="#boxPT" class="btn-block btn-primary">number of vulnerable SOW</button>'),
+#       tags$div(id = 'boxPT', class="collapse in", align="center",
+# 
+#         renderText(paste0(y$nCOI, " / ", nrow(x$x)))),
+# 
+#    HTML('<button data-toggle="collapse" data-target="#boxPT2" class="btn-block btn-primary">Objective: threshold</button>'),
+#    tags$div(id = 'boxPT2', class="collapse in",
+# 
+#       renderTable(thresholds$table)
+#       
+# 
+#       )
+#   
+#   
+#     )
+#   
+#   )
+
+
+
+
+# bsTooltip(id = "OpenModalSD", placement = "right", title="select Scenario Discovery options",options=list(container="body"))
+
+# bsModal(id = "ModalSD", title = "Select PRIM inputs and algorithm",trigger = "OpenModalSD",
+#         
+#         h5("Choose PRIM algorithm type:"),
+# prettyToggle(inputId = "PRIMType",label_on = "normal PRIM",label_off = "multi-objective PRIM", value = FALSE),
+#         
+# #         selectInput(inputId = "Window", label = "Select rolling window length (years)",choices = c("2", "5", "8", "10", "20", "44", "any"), selected = "10"),
+# # 
+# # h5("Include duration and frequency metrics?"),
+# # prettyToggle(inputId = "DurFreq",label_on = "Include",label_off = "Exclude", value = TRUE),
+# # 
+# # renderUI({
+# #   req(input$DurFreq==TRUE)
+# #   
+# #     selectInput(inputId = "QThreshType",label = "High vs low flow year definition type", choices = c("historical", "terciles", "mean & standard deviation"), selected = "historical")
+# #   
+# # }),
+# 
+# 
+# selectInput(inputId = "SOWensemble", label = "Choose SOW ensemble", choices = c("cLHS 300", "cLHS 500"), selected = "cLHS 500")
+# 
+# 
+#         )
+
+
+
+
+# observeEvent({list(input$policyID, input$COIButton, input$Window, input$PRIMType, input$SOWensemble)}, {
+#   
+#   showNotification("Inputs have changed. Please run scenario discovery.", duration = NULL, type = "warning")
+#   
+# }, ignoreInit = T)
+
+```
+
+```{r, absolute panel on PT page}
+
+# absolutePanel(class = "panel panel-default", fixed = T,
+#                 draggable = TRUE, top = 62, left = 318, right ="auto", bottom = "auto",
+#                 width = '13%', height = 'auto',
+#                 style = "overflow-y:scroll; max-height: 142px; opacity: 0.9; style = z-index: 400",
+# 
+#               h4(strong("Vulnerability statistics")),
+# 
+#       HTML('<button data-toggle="collapse" data-target="#box1" class="btn-block btn-primary">number of vulnerable SOW</button>'),
+#       tags$div(id = 'box1', class="collapse in", align="center",
+# 
+#         renderText(paste0(y$nCOI, " / ", nrow(x$x)))),
+# 
+#    HTML('<button data-toggle="collapse" data-target="#box2" class="btn-block btn-primary">Objective: threshold</button>'),
+#    tags$div(id = 'box2', class="collapse in",
+# 
+#       renderTable(thresholds$table)
+#       )
+#    #,
+# 
+# 
+#            # HTML('<button data-toggle="collapse" data-target="#box3" class="btn-block btn-danger">spinny thing</button>')#,
+#       # tags$div(id = 'box3', class="collapse in",
+#       #
+#       #     p %>% layout(height=200)
+#       # )
+# 
+#    )
+# 
+
+```
+
+```{r, choose SOW ensemble}
+
+SOW_all=SOW_500_300_100[[1]]$SOW
+SOW_all=dplyr::select(SOW_all, -matches("RolDef."))
+
+# initialize as cLHS 500
+x=reactiveValues(ensemble=SOW_all, keep=colnames(SOW_all[, -c(4,5)]), x=SOW_all[, -c(4,5)], obj=obj_all)
+
+observeEvent(input$SOWensemble, {
+  
+  if (input$SOWensemble == "cLHS 300"){x$ensemble=SOW_500_300_100[[2]]$SOW} else {x$ensemble=SOW_500_300_100[[1]]$SOW}
+  
+  x$x=x$ensemble[, -c(4,5)]# remove Hydro Scenario and trace number
+  
+  x$x=dplyr::select(x$x, -matches("RolDef."))
+  
+  x$x=x$x[,x$keep] # subset by metrics user has selected
+  
+  
+  ######### also update objectives
+  
+  if(input$SOWensemble == "cLHS 300"){
+    x$obj=dplyr::filter(obj_all, TraceNumber %in% SOW_500_300_100[[2]]$model)
+      # cat(file=stderr(), 'x$obj', length(unique(x$obj$TraceNumber)), "\n") # prints dimension to R console
+  } else {
+      x$obj=obj_all
+      # cat(file=stderr(), 'x$obj', length(unique(x$obj$TraceNumber)), "\n")
+    }
+  
+  
+}, ignoreInit = F)
+
+observeEvent(input$SOWensemble !=update$currentEnsemble, { # want to ignore initiliaztion for the update trigger
+  
+  cat(file=stderr(), 'ensembles:', c(input$SOWensemble, update$currentEnsemble), "\n")
+  
+  req(input$SOWensemble !=update$currentEnsemble)
+  
+  update$ensemble=1
+  update$ensemble2=1
+  
+  update$currentEnsemble=input$SOWensemble
+
+}, ignoreInit = T)
+
+
+```
+
+```{r, filter uncertainty metrics by UI}
+
+
+### window length filter
+
+observeEvent(input$Window,{ 
+  
+  yr=paste0(input$Window, "yr")
+  
+  always_keep=c("Demand", "Mead.PE", "Powell.PE", "min", "max")
+  
+  if(yr=="anyyr"){
+    # do nothing
+  } else if (yr=="44yr") {
+    # mean, median
+    
+    # keep=colnames(SOW_all)[grep(pattern="Q", x = colnames(SOW_all))] # Frequency and duration of high vs low flow years
+    
+    cols=c(always_keep, "mean", "median")
+    
+    x$window=cols
+    
+  } else {
+    
+
+    keep=colnames(SOW_all)[grep(pattern=yr, x = colnames(SOW_all))]
+    cols=c(always_keep, keep)
+    
+    x$window=cols
+
+    
+    
+  }
+  
+  
+}, ignoreInit = F)
+
+### high vs low flow threshold type filter filter
+
+observeEvent(input$QThreshType,{ 
+  
+  # req(input$DurFreq==TRUE)
+  type=input$QThreshType
+
+  if (type=="historical"){
+    
+    keep=colnames(SOW_all)[grep(pattern=".hist", x = colnames(SOW_all))]
+    
+  } else if (type=="terciles") {
+
+    keep=colnames(SOW_all)[grep(pattern=".ter", x = colnames(SOW_all))]
+
+  } else { # mean & standard deviation
+    
+    keep=colnames(SOW_all)[grep(pattern=".SD", x = colnames(SOW_all))]
+
+  }
+  
+  x$QThreshType=keep
+
+}, ignoreInit = F)
+
+# update metrics depending on if duration and frequency are included or excluded
+observe({
+
+  if (!isTruthy(x$QThreshType)){
+    x$keep=x$window
+  } else if (input$DurFreq==FALSE){
+    x$keep=x$window
+  } else {
+    x$keep=c(x$window, x$QThreshType)
+  }
+
+  # cat(file=stderr(), 'x$keep', x$keep, "\n")
+  
+})
+
+observeEvent(x$keep,{ # if column names are updated, update x$x
+  
+  x$x=x$ensemble[, x$keep]
+  
+}, ignoreInit = F)
+
+```
+
+
+```{r, define cases of interest}
+
+y=reactiveValues(nCOI=0)
+
+observeEvent(input$COIButton, {
+  
+  validate(need(!is.na(thresholds$thresholds[1]), "Please select thresholds via the violin plots."))
+
+  AndOrTF=ifelse(input$AndOr == "And", T, F)
+  
+  y$COI=defineCOI(objectives_names = thresholds$objectives, objectives_data = obj$filter, thresholds=thresholds$thresholds, AndOrTF = AndOrTF)
+  
+  y$nCOI=sum(y$COI) # create output variable telling the number of COI. Use in valueBox function
+  
+  y$nonCOI=length(y$COI)-sum(y$COI)
+
+  y$Trigger=1
+  
+  update$thresholds=0
+  update$ensemble=0
+  update$policy=0
+  update$AndOr=0
+  
+}, ignoreNULL = T, ignoreInit = T)
+
+observeEvent(input$COImanual, {
+  
+  AndOrTF=ifelse(input$AndOr == "And", T, F)
+  
+  # add objective and threshold
+
+  c=1
+  for (i in 1:length(input$PlotObj)){
+    
+    name=input$PlotObj[i]
+
+    if (max(obj_all[,name])==input[[paste0("Thresh",i)]]){
+      # do not save, user has not used this objective
+    } else{
+      
+      thresholds$objectives[c]=name
+      thresholds$thresholds[c]=input[[paste0("Thresh",i)]][1]
+      c=c+1 # increase index only when you have added to the vectors
+    }
+    
+    
+  }
+
+  
+  y$COI=defineCOI(objectives_names = thresholds$objectives, objectives_data = obj$filter, thresholds=thresholds$thresholds, AndOrTF = AndOrTF)
+
+  y$nCOI=sum(y$COI) # create output variable telling the number of COI. Use in valueBox function
+
+  y$nonCOI=length(y$COI)-sum(y$COI)
+
+  y$Trigger=1
+
+  thresholds$ManualThresholdsTrigger=thresholds$ManualThresholdsTrigger+1
+  
+  update$thresholds=0
+  update$ensemble=0
+  update$policy=0
+  update$AndOr=0
+  
+  
+})
+
+
+```
+
+```{r, calculate boxes}
+
+coverage=NA; density=NA # to create a dataframe for selected point in peeling trajectory
+box=reactiveValues(Data=NA,PlotTrigger=0, selected=data.frame(coverage, density), oldSelected=data.frame(coverage, density) )
+
+observeEvent(input$SDButton, {
+  
+  req(x$x)
+  req(y$COI)
+
+  showNotification(id="CalculatePT", "Calculating. This may take a couple minutes...", duration = NULL)
+  
+  if(input$PRIMType==FALSE){ # MO PRIM
+   
+      box$Data=MO.PRIM(x=x$x, y=y$COI, qp_val=input$QPval, peel_crit = 2)
+
+
+  } else {
+    
+    temp=prim(x=x$x, y=y$COI, peel_crit = 2, remove_dims = T)
+    
+     dimensions=vector()
+        for (i in 1:length(temp$dimlist)){
+          dimensions[i]=sum(temp$dimlist[[i]]$either)
+        }
+
+    box.metrics=data.frame(coverage=temp$relcoverage, density=temp$y.mean, dimensions, id=1:length(temp$x))
+    
+    add_to_box=list(box.metrics=box.metrics, box.info=temp)
+    
+    box$Data=add_to_box
+    
+  }
+
+    removeNotification(id="CalculatePT")
+    
+    box$PlotTrigger=box$PlotTrigger+1
+    
+    showNotification("Plotting")
+  
+    update$PRIMalg=0 #remove asterisks from button and PT title
+    update$thresholds2=0
+    update$ensemble2=0
+    update$policy2=0
+    update$AndOr2=0
+    
+})
+
+# boxData=multiobjective_prim(x=x, y=y, qp_val=.12)
+
+```
+
+### 
+
+```{r, peeling trajectory}
+
+observeEvent( list(update$thresholds2, update$ensemble2, update$PRIMalg, update$policy2, update$AndOr2) ,{
+
+  update$PTtitle=ifelse(sum(update$thresholds2, update$ensemble2, update$PRIMalg, update$policy2, update$AndOr2) > 0,
+  "*Peeling trajectory*",
+  "Peeling trajectory"
+  )
+
+  
+})
+
+
+
+
+fluidRow(column(width = 10, offset = 0,
+              renderText({update$PTtitle})  
+              ),
+         column(width=1, offset=1,
+    circleButton(inputId = "openPTModal", icon = icon("info-circle"), size = "xs", style="margin-botom: 0px; margin-top: 0px")
+                )
+         
+         )
+hr(style="margin-botom: 0px; margin-top: 5px; margin-left: -10px", width="110%")
+
+# dimensions=vector()
+# for (i in 1:length(boxData$dimlist)){
+#   dimensions[i]=sum(boxData$dimlist[[i]]$either)
+# }
+
+# data=data.frame(coverage=boxData$relcoverage, density=boxData$y.mean, dimensions, id=1:length(boxData$x))
+
+output$dynamic=renderPlotly({
+  
+  box$PlotTrigger
+  input$SDButton # re-render whenever SDButton is hit
+  
+  req(isTruthy(box$Data))
+  
+  data=box$Data$box.metrics
+  data$dimensions=factor(data$dimensions)
+  data$ID=1:nrow(data)
+
+  static=ggplot(data=data, aes(x=coverage, y=density, color=dimensions, customdata=ID))+ # by assigning ID to customdata, you preserve sequential and unique ID of the boxes
+  geom_point(size=3, alpha=0.65, position = "jitter")+
+  coord_cartesian(ylim=c(0,1), xlim=c(0, 1))+
+  scale_color_brewer(type = "diverging", palette = "RdYlBu",direction = -1)#+
+  #theme(plot.margin=margin(t=0, r=0, b=10, l=0, unit='pt'))
+
+  dynamic=ggplotly(static, source = "PT")
+
+  dynamic=layout(dynamic, margin=list(b=100, r=100))
+  
+  dynamic
+  
+  # dynamic=layout(p=dynamic, legend=list(title=list(font=list(size=10), side="left")))
+  # 
+  # dynamic
+  
+})
+
+plotlyOutput("dynamic")
+
+# monitor user clicks on peeling trajectory
+
+observeEvent(eventExpr = event_data("plotly_click", source = "PT"),{
+
+  temp=event_data("plotly_click", source = "PT")
+  
+  # box$ID=temp$pointNumber+1 # plus one because plotly.js is zero indexed, R is 1 indexed
+  
+  box$ID=temp$customdata
+  
+  box$selected$coverage=box$Data$box.metrics$coverage[temp$customdata] # update coverage and density of the selected point
+  box$selected$density=box$Data$box.metrics$density[temp$customdata]
+  
+  
+  # cat(file=stderr(), 'coverage, density = ', c(box$selected$coverage,box$selected$density), "\n") # prints dimension to R console
+  
+  xnew=box$selected$coverage
+  xold=box$oldSelected$coverage
+  ynew=box$selected$density
+  yold=box$selected$density
+    
+  ndim=max(box$Data$box.metrics$dimensions) # this will be the plotly index of the trace that always needs deleted
+  
+  plotlyProxy("dynamic", session) %>%
+    plotlyProxyInvoke("deleteTraces", list(as.integer(ndim))) %>%
+    plotlyProxyInvoke("addTraces", list(x=c(xnew,xnew),y=c(ynew, ynew),
+                        type = 'scatter',
+                        mode = 'markers', marker = list(
+        size=20, color="transparent",
+        line = list(
+        color = 'black',
+        width = 3)
+          )
+        , name="selected")
+                          )
+  
+  box$oldSelected$coverage=xnew
+  box$oldSelected$density=ynew
+  
+  
+})
+
+
+
+```
+
+
+
+Column
+------------------------
+
+### Scenario boxes
+
+```{r}
+
+observeEvent(list(input$SDButton, input$DurFreq, input$policyID), { # if SD is rerun, reset the box ID so scenario boxes pairs plot is removed
+  box$ID=NULL
+  # y$Trigger=0
+
+}, ignoreInit = T)
+
+save=reactiveValues() # create reactive value to save range_plot. It can then be saved to the database for comparing polices and scenarios
+
+renderPlot({
+
+validate(need(x$x, "Select uncertainty metrics on the Define vulnerability page."))
+validate(need(y$COI, "Define vulnerability thresholds using the violin plots on the Define vulnerability page."))
+validate(need(box$Data, 'Perform scenario discovery then select a point from the peeling trajectory.'))
+  
+req(isTruthy(box$Data$box.info))
+req(isTruthy(y$COI))
+req(isTruthy(x$keep))
+req(isTruthy(x$x))
+validate(need(box$ID, 'Select a point from the peeling trajectory.'))
+
+input$SDButton # replot if Perform Scenario Discovery button is hit
+ 
+yCOI=isolate(y$COI) 
+Vulnerable=ifelse(yCOI==1, "Yes", "No")
+
+dim_names=isolate(x$keep) # will show all dimensions input to PRIM
+
+sig_dim_names=names(box$Data$box.info$dimlist[[box$ID]]$either)[which(box$Data$box.info$dimlist[[box$ID]]$either==TRUE)] # will only show significant dimensions
+save$ndim=length(sig_dim_names)
+
+x=isolate(x$x)
+metrics=data.frame(x[,dim_names])
+colnames(metrics)=dim_names
+
+box_lims=data.frame(box$Data$box.info$box[[box$ID]])
+
+colnames(box_lims)=sig_dim_names
+
+# add columns for the unconstrained dimensions
+
+add=matrix(NA, ncol=length(dim_names)-length(sig_dim_names), nrow = 2)
+add=data.frame(add)
+colnames(add)=dim_names[!(dim_names %in% sig_dim_names)]
+
+box_lims=data.frame(box_lims, add)
+
+# cat(file=stderr(), 'box_lims:', colnames(box_lims), "\n") # prints dimension to R console
+
+points=data.frame(metrics, Vulnerable)
+
+add_plot=range_plot(box_lims = box_lims, x=x, units=units, annotation_size=input$RangePlotFont) # box looking plots of metric range
+
+save$range_plot=add_plot
+
+  test_var=if(input$PlotSignificant==FALSE){sig_dim_names} else {dim_names} # check if all or only significant metrics being plotted
+
+if (length(test_var)>1){ # use ggpairs if 2 plus variables to plot
+
+  DurFreq=isolate(input$DurFreq)
+
+  # if(DurFreq==TRUE){labelSize=12; tickSize=10} else { labelSize=16; tickSize=11}# change text size depending on number of metrics
+  
+  labelSize=input$SDscatterLabel
+  tickSize=input$SDscatterTick
+  
+  diagInput=if(input$SDDiagonalTF==T){list(continuous = modified_density)} else {list(continuous = "blankDiag")}
+  
+  if(input$PlotSignificant==FALSE){columns=sig_dim_names}else{columns=colnames(points)[-length(points)]}
+  
+  pairs=ggpairs(data=points, columns = columns,
+        aes(color=Vulnerable, alpha=0.3),
+        lower = list(continuous=wrap(SD_plot, dim_names=dim_names, box_lims=box_lims)),
+        upper="blank", legend=NULL, switch="both", title="Scenario box constraints",
+        diag = diagInput)+
+        theme(text=element_text(size=labelSize))
+  
+  pairs=pairs+theme(axis.text.x = element_text(angle=90, size=tickSize), axis.text.y = element_text(size=tickSize))
+  
+  temp=pairs[2,1] # extract plot to steal legend from
+
+  temp=temp+theme(legend.key = element_rect(fill = "transparent", colour = "transparent"),
+                rect = element_rect(fill = "white")) # make legend background transparent
+
+  legend=get_legend(temp) #steal legend
+  legend=as_ggplot(legend) # convert to ggplot
+
+
+  
+  if(DurFreq==TRUE){width=.45; height=.72; x=.775; y=.68} else {width=.42; height=.62;x=.79; y=.72}# change viewport size depending on number of metrics
+  
+  xlegend=input$SDlegendx
+  ylegend=input$SDlegendy
+  
+  if( input$SDDiagonalTF==F){
+      pairs=gpairs_lower(pairs) # remove extra labels when diagonal not wanted
+  }
+  
+  
+  vp=viewport(width = width, height=height, x=x, y=y) # viewport for add plot
+  vp2=viewport(width = 0.1, height=0.2, x=xlegend, y=ylegend) # viewport for legend
+  print(pairs)
+  print(add_plot, vp=vp)
+  print(legend, vp=vp2)
+  
+} else { # single scatter plot with arbitrary y axis index
+  
+  # determine if upper, lower, or both constraints are used
+  
+  my_cols=c("No"="blue", "Yes"="red")
+  points$index=1:nrow(points)
+  
+  p1=ggplot(data=points, aes(y=.data[[sig_dim_names]], x=index, color=Vulnerable))+
+    geom_point(size=4.5, alpha=0.3)+
+    geom_hline(yintercept=box_lims[2,1])+
+    geom_hline(yintercept=box_lims[1,1])+
+    scale_y_continuous(limits=range(points[[sig_dim_names]]))+
+    theme(legend.position = c(.93,.93))+
+    scale_colour_manual(values=my_cols)
+  
+  plot_grid(p1, add_plot, nrow=1, rel_widths = c(1/2, 1/2))
+
+}
+
+  
+})
+
+
+
+
+```
+
+
+3.Compare policies and scenarios {data-orientation=columns}
+==============================================================
+
+```{r, save scenarios to database}
+
+database=reactiveValues()
+
+observeEvent(input$SaveScenario,{
+  
+  if(input$ScenarioName %in% names(database)){ # tell user when name has already been used
+    showNotification(ui = "This name is already in use! Please create a new one.",duration = 10, type = "error")
+    
+  }
+  
+  req(!(input$ScenarioName %in% names(database))) # do not save if name already used
+  
+    ID=input$policyID
+    nCOI=paste0(y$nCOI, " / ", length(y$COI))
+    obj_thresh=thresholds$table
+    plot=save$range_plot
+    box_stats=data.frame(metric=c("coverage", "density", "dimensions"), value=c(box$selected$coverage, box$selected$density, save$ndim))
+    
+
+    database[[input$ScenarioName]]=list(ID=ID, nCOI=nCOI, obj_thresh=obj_thresh, range_plot=plot, box_stats=box_stats, algorithm=algorithm$name, window=input$Window, includeDurFreq=input$DurFreq, QThreshType=input$QThreshType, SOWensemble=input$SOWensemble)
+
+    showNotification("Scenario has been saved. You can now view it on the -Compare policies and scenarios- page.")
+    
+})
+
+```
+
+
+```{r, choose analysis to display}
+
+# h4(strong("Choose up to four scenarios to display"), align="left")
+
+fixedPanel(top="7%", left = "3%", style="z-index: 1000", width="98%",
+
+fluidRow(column(width=3,
+  renderUI({
+  selectInput(inputId = "saved1",label = NULL , choices = c("Select analysis", names(database)), selected = NULL, width = "350px")
+})    
+      ),
+         column(width=3,
+                
+    renderUI({
+  selectInput(inputId = "saved2",label = NULL , choices = c("Select analysis", names(database)), selected = NULL, width = "350px")
+})             
+                ),
+         column(width=3,
+                
+    renderUI({
+  selectInput(inputId = "saved3",label = NULL , choices = c("Select analysis", names(database)), selected = NULL, width = "350px")
+})             
+                
+                
+                ),
+         column(width=3,
+      
+    renderUI({
+  selectInput(inputId = "saved4",label = NULL , choices = c("Select analysis", names(database)), selected = NULL, width = "350px")
+}) 
+                            
+                          )
+
+#,  style = "
+# position:absolute;
+# z-index: 1000;"
+         )
+
+)
+
+```
+
+
+Column {style="height:125pc; position:relative;"}
+-----------------------------
+
+###
+
+```{r, compare 1}
+
+div(style="margin-bottom: 3pc")
+
+output$DV1=renderPlotly({
+  
+  req(input$saved1)
+  req(input$saved1 != "Select analysis")
+  #req(((input$HideMead %% 2)== 0) )
+  
+  data=database[[input$saved1]]
+  
+  cat(file=stderr(), 'ID', data$ID, "\n")
+  
+  DV_plot(to_plot=data$ID, metric_label="order", preferred_direction="min", y_axis2=F)
+}) 
+
+# fluidRow(column(width=9, offset=2,
+#      
+#   renderUI({
+#   selectInput(inputId = "saved1",label = h4(strong("Choose scenario to display")), choices = c("Select analysis", names(database)), selected = NULL, width = "350px")
+# })  
+#     )
+# 
+#       )
+
+div(style="margin-bottom: 10px")
+
+metrics1=c("policy ID","SOW ensemble")
+metrics2=c("algorithm", "coverage", "density", "dimensions" )
+
+div(align="left", 
+      
+      h4(strong("1. Define vulnerability thresholds"))
+      
+      )
+hr()
+
+fluidRow(column(width = 10, offset = 1,
+
+      div(align="center",
+          
+         h5(strong("Policy ID & SOW ensemble")) 
+          ),
+      
+                 
+        renderTable({
+  
+  req(input$saved1)
+  req(input$saved1 != "Select analysis")
+  
+  data=database[[input$saved1]]
+  values1=c(data$ID, data$SOWensemble)
+ 
+  data.frame(metrics1, values1)
+  
+  
+  }, striped = T, bordered = T, spacing = "m", rownames = F, colnames = F),
+
+  
+  div(align="center", h5(strong("Lake Mead operation diagram")))
+  
+  # splitLayout(cellWidths = c("20%","70%", "10%"),h5(""),h5(strong("Lake Mead operation diagram")), circleButton(inputId = "HideMead", icon=icon("caret-down"), size = "xs"))
+
+))
+
+
+
+
+fluidRow(column(width = 10, offset = 0,
+                
+#HTML('<button data-toggle="collapse"  data-target="#DV1" " Show/Hide/button>'),
+ #  tags$div(id = 'DV1', class="collapse", style= "width: 440px",
+
+      plotlyOutput("DV1")
+      
+      #)              
+  )
+)
+ 
+  
+fluidRow(column(width = 10, offset = 1,
+         
+    div(align="center", 
+      
+  h5(strong("Vulnerability thresholds"))
+      
+  ),
+  
+  renderTable({
+        req(input$saved1)
+        req(input$saved1 != "Select analysis")
+        
+        temp=database[[input$saved1]]$obj_thresh
+        
+        temp
+        
+    }, striped = T, bordered = T, spacing = "m", rownames = F, colnames = T),
+  
+
+    div(align="center",
+        renderText(paste0("Number of vulnerable cases: ", database[[input$saved1]]$nCOI))
+        )
+
+         ))
+
+div(align="left", 
+      
+  h4(strong("2. Perform Scenario Discovery"))
+      
+)
+
+hr()
+
+fluidRow(column(width = 10, offset = 1,
+                
+div(align="center", 
+      
+  h5(strong("Algorithm & scenario metrics"))
+      
+),
+  
+  renderTable({
+    
+  req(input$saved1)
+  req(input$saved1 != "Select analysis")
+  
+  data=database[[input$saved1]]
+  
+  values2=c(data$algorithm, round(data$box_stats[1:2,2],2), round(data$box_stats[3,2],2))
+  
+  data.frame(metrics=metrics2, values=values2)
+
+  }, striped = T, bordered = T, spacing = "m", rownames = F, colnames = F),
+  
+div(align="center", 
+      
+  h5(strong("Uncertainty metric constraints"))
+  
+)
+))
+
+renderPlot({
+
+  req(input$saved1)
+  req(input$saved1 != "Select analysis")
+
+  data=database[[input$saved1]]
+
+  data$range_plot
+
+  }, width = 450, height = 900)                    
+
+```
+
+
+Column {style="height:125pc;"}
+-----------------------
+
+###
+
+```{r, compare 2}
+
+div(style="margin-bottom: 3pc")
+
+output$DV2=renderPlotly({
+  
+  req(input$saved2)
+  req(input$saved2 != "Select analysis")
+  #req(((input$HideMead %% 2)== 0) )
+  
+  data=database[[input$saved2]]
+  
+  cat(file=stderr(), 'ID', data$ID, "\n")
+  
+  DV_plot(to_plot=data$ID, metric_label="order", preferred_direction="min", y_axis2=F)
+}) 
+
+# fluidRow(column(width=9, offset=2,
+#      
+#   renderUI({
+#   selectInput(inputId = "saved2",label = h4(strong("Choose scenario to display")), choices = c("Select analysis", names(database)), selected = NULL, width = "350px")
+# })  
+#     )
+# 
+#       )
+
+div(style="margin-bottom: 10px")
+
+
+div(align="left", 
+      
+      h4(strong("1. Define vulnerability thresholds"))
+      
+      )
+hr()
+
+fluidRow(column(width = 10, offset = 1,
+
+      div(align="center",
+          
+         h5(strong("Policy ID & SOW ensemble")) 
+          ),
+      
+                 
+        renderTable({
+  
+  req(input$saved2)
+  req(input$saved2 != "Select analysis")
+  
+  data=database[[input$saved2]]
+  values1=c(data$ID, data$SOWensemble)
+ 
+  data.frame(metrics1, values1)
+  
+  
+  }, striped = T, bordered = T, spacing = "m", rownames = F, colnames = F),
+
+  
+  div(align="center", h5(strong("Lake Mead operation diagram")))
+  
+  # splitLayout(cellWidths = c("20%","70%", "10%"),h5(""),h5(strong("Lake Mead operation diagram")), circleButton(inputId = "HideMead", icon=icon("caret-down"), size = "xs"))
+
+))
+
+
+
+
+fluidRow(column(width = 10, offset = 0,
+                
+#HTML('<button data-toggle="collapse"  data-target="#DV2" " Show/Hide/button>'),
+   #tags$div(id = 'DV2', class="collapse", style= "width: 440px",
+
+      plotlyOutput("DV2")
+      
+      #)              
+  )
+)
+ 
+  
+fluidRow(column(width = 10, offset = 1,
+         
+    div(align="center", 
+      
+  h5(strong("Vulnerability thresholds"))
+      
+  ),
+  
+  renderTable({
+        req(input$saved2)
+        req(input$saved2 != "Select analysis")
+        
+        temp=database[[input$saved2]]$obj_thresh
+        
+        temp
+        
+    }, striped = T, bordered = T, spacing = "m", rownames = F, colnames = T),
+  
+
+    div(align="center",
+        renderText(paste0("Number of vulnerable cases: ", database[[input$saved2]]$nCOI))
+        )
+
+         ))
+
+div(align="left", 
+      
+  h4(strong("2. Perform Scenario Discovery"))
+      
+)
+
+hr()
+
+fluidRow(column(width = 10, offset = 1,
+                
+div(align="center", 
+      
+  h5(strong("Algorithm & scenario metrics"))
+      
+),
+  
+  renderTable({
+    
+  req(input$saved2)
+  req(input$saved2 != "Select analysis")
+  
+  data=database[[input$saved2]]
+  
+  values2=c(data$algorithm, round(data$box_stats[1:2,2],2), round(data$box_stats[3,2],2))
+  
+  data.frame(metrics=metrics2, values=values2)
+
+  }, striped = T, bordered = T, spacing = "m", rownames = F, colnames = F),
+  
+div(align="center", 
+      
+  h5(strong("Uncertainty metric constraints"))
+  
+)
+))
+
+renderPlot({
+
+  req(input$saved2)
+  req(input$saved2 != "Select analysis")
+
+  data=database[[input$saved2]]
+
+  data$range_plot
+
+  }, width = 450, height = 900)   
+```
+
+Column {style="height:125pc;"}
+-----------------------
+
+### 
+
+```{r, compare 3}
+
+div(style="margin-bottom: 3pc")
+
+output$DV3=renderPlotly({
+  
+  req(input$saved3)
+  req(input$saved3 != "Select analysis")
+  #req(((input$HideMead %% 2)== 0) )
+  
+  data=database[[input$saved3]]
+  
+  cat(file=stderr(), 'ID', data$ID, "\n")
+  
+  DV_plot(to_plot=data$ID, metric_label="order", preferred_direction="min", y_axis2=F)
+}) 
+
+
+# fluidRow(column(width=9, offset=2,
+#      
+#   renderUI({
+#   selectInput(inputId = "saved3",label = h4(strong("Choose scenario to display")), choices = c("Select analysis", names(database)), selected = NULL, width = "350px")
+# })  
+#     )
+# 
+#       )
+
+div(style="margin-bottom: 10px")
+
+metrics1=c("policy ID","SOW ensemble")
+metrics2=c("algorithm", "coverage", "density", "dimensions" )
+
+div(align="left", 
+      
+      h4(strong("1. Define vulnerability thresholds"))
+      
+      )
+hr()
+
+fluidRow(column(width = 10, offset = 1,
+
+      div(align="center",
+          
+         h5(strong("Policy ID & SOW ensemble")) 
+          ),
+      
+                 
+        renderTable({
+  
+  req(input$saved3)
+  req(input$saved3 != "Select analysis")
+  
+  data=database[[input$saved3]]
+  values1=c(data$ID, data$SOWensemble)
+ 
+  data.frame(metrics1, values1)
+  
+  
+  }, striped = T, bordered = T, spacing = "m", rownames = F, colnames = F),
+
+  
+  div(align="center", h5(strong("Lake Mead operation diagram")))
+  
+  # splitLayout(cellWidths = c("20%","70%", "10%"),h5(""),h5(strong("Lake Mead operation diagram")), circleButton(inputId = "HideMead", icon=icon("caret-down"), size = "xs"))
+
+))
+
+
+
+
+fluidRow(column(width = 10, offset = 0,
+                
+#HTML('<button data-toggle="collapse"  data-target="#DV3" " Show/Hide/button>'),
+   #tags$div(id = 'DV3', class="collapse", style= "width: 440px",
+
+      plotlyOutput("DV3")
+      
+      #)              
+  )
+)
+ 
+  
+fluidRow(column(width = 10, offset = 1,
+         
+    div(align="center", 
+      
+  h5(strong("Vulnerability thresholds"))
+      
+  ),
+  
+  renderTable({
+        req(input$saved3)
+        req(input$saved3 != "Select analysis")
+        
+        temp=database[[input$saved3]]$obj_thresh
+        
+        temp
+        
+    }, striped = T, bordered = T, spacing = "m", rownames = F, colnames = T),
+  
+
+    div(align="center",
+        renderText(paste0("Number of vulnerable cases: ", database[[input$saved3]]$nCOI))
+        )
+
+         ))
+
+div(align="left", 
+      
+  h4(strong("2. Perform Scenario Discovery"))
+      
+)
+
+hr()
+
+fluidRow(column(width = 10, offset = 1,
+                
+div(align="center", 
+      
+  h5(strong("Algorithm & scenario metrics"))
+      
+),
+  
+  renderTable({
+    
+  req(input$saved3)
+  req(input$saved3 != "Select analysis")
+  
+  data=database[[input$saved3]]
+  
+  values2=c(data$algorithm, round(data$box_stats[1:2,2],2), round(data$box_stats[3,2],2))
+  
+  data.frame(metrics=metrics2, values=values2)
+
+  }, striped = T, bordered = T, spacing = "m", rownames = F, colnames = F),
+  
+div(align="center", 
+      
+  h5(strong("Uncertainty metric constraints"))
+  
+)
+))
+
+renderPlot({
+
+  req(input$saved3)
+  req(input$saved3 != "Select analysis")
+
+  data=database[[input$saved3]]
+
+  data$range_plot
+
+  }, width = 450, height = 900)   
+```
+
+Column {style="height:125pc;"}
+-----------------------
+
+###
+
+```{r, compare 4}
+
+div(style="margin-bottom: 3pc")
+
+output$DV4=renderPlotly({
+  
+  req(input$saved4)
+  req(input$saved4 != "Select analysis")
+  #req(((input$HideMead %% 2)== 0) )
+  
+  data=database[[input$saved4]]
+  
+  cat(file=stderr(), 'ID', data$ID, "\n")
+  
+  DV_plot(to_plot=data$ID, metric_label="order", preferred_direction="min", y_axis2=F)
+}) 
+
+
+# fluidRow(column(width=9, offset=2,
+#      
+#   renderUI({
+#   selectInput(inputId = "saved4",label = h4(strong("Choose scenario to display")), choices = c("Select analysis", names(database)), selected = NULL, width = "350px")
+# })  
+#     )
+# 
+#       )
+
+div(style="margin-bottom: 10px")
+
+metrics1=c("policy ID","SOW ensemble")
+metrics2=c("algorithm", "coverage", "density", "dimensions" )
+
+div(align="left", 
+      
+      h4(strong("1. Define vulnerability thresholds"))
+      
+      )
+hr()
+
+fluidRow(column(width = 10, offset = 1,
+
+      div(align="center",
+          
+         h5(strong("Policy ID & SOW ensemble")) 
+          ),
+      
+                 
+        renderTable({
+  
+  req(input$saved4)
+  req(input$saved4 != "Select analysis")
+  
+  data=database[[input$saved4]]
+  values1=c(data$ID, data$SOWensemble)
+ 
+  data.frame(metrics1, values1)
+  
+  
+  }, striped = T, bordered = T, spacing = "m", rownames = F, colnames = F),
+
+  
+  div(align="center", h5(strong("Lake Mead operation diagram")))
+  
+  # splitLayout(cellWidths = c("20%","70%", "10%"),h5(""),h5(strong("Lake Mead operation diagram")), circleButton(inputId = "HideMead", icon=icon("caret-down"), size = "xs"))
+
+))
+
+
+
+
+  fluidRow(column(width = 10, offset = 0,
+                
+#HTML('<button data-toggle="collapse"  data-target="#DV4" " Show/Hide/button>'),
+   #tags$div(id = 'DV4', class="collapse", style= "width: 440px",
+
+      plotlyOutput("DV4")
+      
+      #)              
+  )
+)
+ 
+  
+fluidRow(column(width = 10, offset = 1,
+         
+    div(align="center", 
+      
+  h5(strong("Vulnerability thresholds"))
+      
+  ),
+  
+  renderTable({
+        req(input$saved4)
+        req(input$saved4 != "Select analysis")
+        
+        temp=database[[input$saved4]]$obj_thresh
+        
+        temp
+        
+    }, striped = T, bordered = T, spacing = "m", rownames = F, colnames = T),
+  
+
+    div(align="center",
+        renderText(paste0("Number of vulnerable cases: ", database[[input$saved4]]$nCOI))
+        )
+
+         ))
+
+div(align="left", 
+      
+  h4(strong("2. Perform Scenario Discovery"))
+      
+)
+
+hr()
+
+fluidRow(column(width = 10, offset = 1,
+                
+div(align="center", 
+      
+  h5(strong("Algorithm & scenario metrics"))
+      
+),
+  
+  renderTable({
+    
+  req(input$saved4)
+  req(input$saved4 != "Select analysis")
+  
+  data=database[[input$saved4]]
+  
+  values2=c(data$algorithm, round(data$box_stats[1:2,2],2), round(data$box_stats[3,2],2))
+  
+  data.frame(metrics=metrics2, values=values2)
+
+  }, striped = T, bordered = T, spacing = "m", rownames = F, colnames = F),
+  
+div(align="center", 
+      
+  h5(strong("Uncertainty metric constraints"))
+  
+)
+))
+
+renderPlot({
+
+  req(input$saved4)
+  req(input$saved4 != "Select analysis")
+
+  data=database[[input$saved4]]
+
+  data$range_plot
+
+  }, width = 450, height = 900)   
+```
+
+
+
