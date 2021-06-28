@@ -647,7 +647,7 @@ prim=function(x,y, thresh=NULL, box.init = NULL, peel.alpha = .05, paste.alpha =
 
 ########################## MO.PRIM ######################################
   
-  MO.PRIM=function(x, y, qp_val=.1, peel_crit=2){
+  MO.PRIM=function(x, y, qp_val=.1, peel_crit=2, peel_alpha=input$PeelAlpha){
     
     # run PRIM using ALL metrics
     # significant=c()
@@ -663,7 +663,7 @@ prim=function(x,y, thresh=NULL, box.init = NULL, peel.alpha = .05, paste.alpha =
     #   
     # }
     
-    boxData=prim(x,y, peel_crit = peel_crit)
+    boxData=prim(x,y, peel_crit = peel_crit, peel.alpha = peel_alpha)
     pvals=boxData$pvals
     dimlist=boxData$dimlist
     dim_names=names(boxData$dimlist[[1]]$either) # get metric names
@@ -716,7 +716,7 @@ prim=function(x,y, thresh=NULL, box.init = NULL, peel.alpha = .05, paste.alpha =
         x_temp=data.frame(x[, c(dims_temp)])
         colnames(x_temp)=dims_temp
         
-        prim_temp=prim(x=x_temp, y=y,peel_crit = peel_crit)
+        prim_temp=prim(x=x_temp, y=y,peel_crit = peel_crit, peel.alpha = peel_alpha)
         pvals=prim_temp$pvals
         
         remove_boxes=c()
@@ -935,9 +935,32 @@ prim=function(x,y, thresh=NULL, box.init = NULL, peel.alpha = .05, paste.alpha =
                    labelsize=3, show_legend=F){ #labelsize=delayFontSlider()
     
     # filter for chosen policies
-    filter.long=dplyr::filter(long.data, policy %in% to_plot)
-    filter.wide=dplyr::filter(wide.data, ID %in% to_plot)
-    filter.metric=dplyr::filter(metric, ID %in% to_plot)
+    # filter.long=dplyr::filter(long.data, policy %in% to_plot)
+    # filter.wide=dplyr::filter(wide.data, ID %in% to_plot)
+    # filter.metric=dplyr::filter(metric, ID %in% to_plot)
+    
+    # use for loop with rbind to filter by ID such that dataframe is ordered by sequency in which user chose IDs
+    
+    filter.long=dplyr::filter(long.data, policy %in% to_plot[1])
+    filter.wide=dplyr::filter(wide.data, ID %in% to_plot[1])
+    filter.metric=dplyr::filter(metric, ID %in% to_plot[1])
+    
+    
+    if(!is.null(to_plot[2])){
+      
+      for(i in to_plot[-1]){
+        
+        add=dplyr::filter(long.data, policy==i)
+        filter.long=rbind(filter.long, add)
+        add=dplyr::filter(wide.data, ID==i)
+        filter.wide=rbind(filter.wide, add)
+        add=dplyr::filter(metric, ID==i)
+        filter.metric=rbind(filter.metric, add)
+      }
+      
+    }
+    
+    
     
     # get rank, append to data frames
     
@@ -948,7 +971,7 @@ prim=function(x,y, thresh=NULL, box.init = NULL, peel.alpha = .05, paste.alpha =
     if(metric_label=="order"){
       
       filter.metric$order=1:nrow(filter.metric) # add a column that simply indicates the order by which user added metrics
-      filter.metric=left_join(x=data.frame(order=as.integer(to_plot)), y=filter.metric, by="order") # reorder by the order in which user entered them
+      # filter.metric=left_join(x=data.frame(order=as.integer(to_plot)), y=filter.metric, by="order") # reorder by the order in which user entered them
       
     }
     
@@ -968,7 +991,8 @@ prim=function(x,y, thresh=NULL, box.init = NULL, peel.alpha = .05, paste.alpha =
       geom_text(data=filter.long, aes(x=rank, y= elevation, label=v_lab),color='black', nudge_y = -4, size=text_size, check_overlap = T)+
       geom_text(data=filter.wide, aes(x=rank, y= policy_lab_y, label=policy_lab), nudge_y = 4, size=text_size, check_overlap = T)+
       # geom_text(data=filter.wide, aes(x=rank, y= policy_lab_y, label=SOM_node), nudge_y = 10, size=text_size, check_overlap = T)+ I have removed SOM node for NOW
-      scale_fill_brewer(palette='RdYlBu', direction = -1)+
+      # scale_fill_brewer(palette='RdYlBu', direction = -1)+
+      scale_fill_brewer(palette='YlOrRd', direction = 1)+
       xlab(paste(metric_label, 'rank', sep=' '))+
       ylab('pool elevation [ft msl]')+
       theme(plot.title = element_text(size=10), plot.margin=margin(t=0, r=0, b=0, l=0, unit='pt'))+
@@ -1187,7 +1211,7 @@ gpairs_lower <- function(g){
       IDs=c(firstpolicy, policyID)
     }
     
-    # use for loop with rbing to filter by ID such that dataframe is ordered by sequency in which user chose IDs
+    # use for loop with rbind to filter by ID such that dataframe is ordered by sequency in which user chose IDs
     
     obj=dplyr::filter(data, ID == firstpolicy)
     

@@ -4,10 +4,9 @@ author: "Nathan Bonham"
 date: "April 27, 2021"
 output: 
   flexdashboard::flex_dashboard:
-    source_code: "https://github.com/nabocrb/CRB-Robustness-App-BOR"
+    source_code: "https://github.com/nabocrb/CRB-Scenario-Discovery-App"
     theme: spacelab
-    navbar:
-      - { icon: "fa-cog", align: right}
+    
     
 runtime: shiny
 
@@ -76,13 +75,6 @@ splitLayout(cellWidths = c(300,300),
 
 modalTrigger=reactiveValues(Obj=0, PT=0)
 
-# observeEvent(input$openModalObj,{
-#   
-#   modalTrigger$Obj=1
-#   modalTrigger$PT=0
-#   
-# })
-
 observeEvent(input$openModalObj, {
   
   toggleModal(session = session, modalId = "settingsModal", toggle = "open")
@@ -111,7 +103,7 @@ output$RollingAVGimage=renderImage({
 
 bsModal(id="WindowHelpModal", title = "Measuring streamflow with retrospective observation windows", trigger = "WindowHelp1",
         
-                renderText("The table below shows an example calculation of the maximum and minimum 5-yr average flow. First, the five year rolling average of the PREVIOUS five years is calculated. For example, the five year rolling average at the end of 2021 is the average of years 2017 to 2021. Then, the maximum and minimum of the 5-yr averages are taken as the uncertainty metrics. We chose to use the previous years of flow, rather the upcoming years, such that the metrics are directly observable and can be implemented in a signpost and adaptation monitoring system. For example, imagine that Scenario Discovery indicates a policy fails performance thresholds when the minimum five year average flow is below 11 MAF. If the policy were implemented in real life and you observe that the average flow over the previous five years is less than 11 MAF, then adaptive action may be needed. Use the dropdown menu to select the window length. If you select -44-, then the uncertainty metric is simply the mean flow over the simulation. If you select -any-, then the Scenario Discovery algorithm will be run with all window lengths. This is not recommended as it is computationally expensive, difficult to plot, and the results may use redundant or difficult-to-interpret metric combinations."),
+                renderText("The table below shows an example calculation of the maximum and minimum 5-yr average flow. First, the five year rolling average of the PREVIOUS five years is calculated. For example, the five year rolling average at the end of 2021 is the average of years 2017 to 2021. Then, the maximum and minimum of the 5-yr averages are taken as the observable conditions. We chose to use the previous years of flow, rather the upcoming years, such that the metrics are directly observable and can be implemented in a signpost and adaptation monitoring system. For example, imagine that Scenario Discovery indicates a policy fails performance thresholds when the minimum five year average flow is below 11 MAF. If the policy were implemented in real life and you observe that the average flow over the previous five years is less than 11 MAF, then adaptive action may be needed. Use the dropdown menu to select the window length. If you select -44-, then the uncertainty metric is simply the mean flow over the simulation. If you select -any-, then the Scenario Discovery algorithm will be run with all window lengths. This is not recommended as it is computationally expensive, difficult to plot, and the results may use redundant or difficult-to-interpret metric combinations."),
         
         div(style="margin-bottom: 20px"),
         
@@ -180,7 +172,7 @@ div(style="margin-bottom:300px")
 
 ```
 
-```{r, Uncertainty metrics modal}
+```{r, observable conditions modal}
 
 output$UMtable=renderImage({
 
@@ -191,9 +183,9 @@ output$UMtable=renderImage({
 
         }, deleteFile = F)
 
-bsModal(id = "MetricsHelpModal", title = "Uncertainty metrics", trigger = "MetricsHelp1",
+bsModal(id = "MetricsHelpModal", title = "Observable conditions", trigger = "MetricsHelp1",
         
-        renderText("Uncertainty metrics quantify important variables in the Colorado River Basin that we do not control, yet they affect the performance of the system. These metrics are uncertain because we do not know the magnitude of them in the future. The table below summarizes the uncertainty metrics used in this study. Broadly speaking, we consider three sources of uncertainty: annual streamflow at Lees Ferry, AZ, initial system conditions, and water demand. To characterize hydrologic uncertainty, we calculate average annual flow in moving windows from 2 to 20 years in length. Moreover, we calculate duration and frequency metrics to provide a nuanced understanding of how different flow patterns may produce similar average flows. For additional information on the hydrology metrics, please use their information buttons found in the dropdown menu. For initial system conditions, we consider the pool elevations of Lake Mead and Lake Powell. The final metric is demand, which is the volume of water consumed by the Upper Basin states annually. Use this drop down menu to select which annual flow metrics to use in the Scenario Discover algorithm. Note that system condition and demand metrics are always passed to Scenario Discovery."),
+        renderText("Observable conditions (AKA uncertainty metrics) quantify important variables in the Colorado River Basin that we do not control, yet they affect the performance of the system. These metrics are uncertain because we do not know the magnitude of them in the future. The table below summarizes the observable conditions used in this study. Broadly speaking, we consider three sources of uncertainty: annual streamflow at Lees Ferry, AZ, initial system conditions, and water demand. To characterize hydrologic uncertainty, we calculate average annual flow in moving windows from 2 to 20 years in length. Moreover, we calculate duration and frequency metrics to provide a nuanced understanding of how different flow patterns may produce similar average flows. For additional information on the hydrology metrics, please use their information buttons found in the dropdown menu. For initial system conditions, we consider the pool elevations of Lake Mead and Lake Powell. The final metric is demand, which is the volume of water consumed by the Upper Basin states annually. Use this drop down menu to select which annual flow metrics to use in the Scenario Discover algorithm. Note that system condition and demand metrics are always passed to Scenario Discovery."),
         
         div(style="margin-bottom:20px"),
         
@@ -218,11 +210,11 @@ output$CoverageDensity=renderImage({
 
 bsModal(id="PTModal", title = "Peeling trajectory, density, and coverage",trigger = "openPTModal", 
           
-        renderText("The peeling trajectory plot is a scatter plot of density versus coverage, where each point is one scenario box found with the Scenario Discovery algorithm. Density and coverage are two metrics of scenario quality, the definitions of which are depicted in the figure below. Each plot shows States of The World plotted in two-dimensional space, where those two dimensions are uncertainty metrics. The SOW are colored according to if they are vulnerable (failed performance thresholds) or not vulnerable (met performance thresholds). The red boxes represent scenarios, describing the upper and lower limits of uncertainty metrics that describe the characteristics of SOW where performance thresholds are transgressed. The scenario box in the left plot has perfect density and coverage, capturing only and all of the vulnerable cases. In this ideal case, both density and coverage equal 1. The middle plot shows perfect coverage because all vulnerable cases are contained in the box, but imperfect density because there exists non-vulnerable cases in the box. The plot on the right shows the opposite case of perfect density, but coverage less than one. Keep in mind that SOW have more than two uncertainty metrics, and thus the scenario boxes can also exceed two-dimensions, although scenarios with fewer dimensions are generally more interpretable."),
+        renderText("The peeling trajectory plot is a scatter plot of density versus coverage, where each point is one scenario box found with the Scenario Discovery algorithm. Density and coverage are two metrics of scenario quality, the definitions of which are depicted in the figure below. Each plot shows States of The World plotted in two-dimensional space, where those two dimensions are observable conditions. The SOW are colored according to if they are vulnerable (failed performance thresholds) or not vulnerable (met performance thresholds). The red boxes represent scenarios, describing the upper and lower limits of observable conditions that describe the characteristics of SOW where performance thresholds are transgressed. The scenario box in the left plot has perfect density and coverage, capturing only and all of the vulnerable cases. In this ideal case, both density and coverage equal 1. The middle plot shows perfect coverage because all vulnerable cases are contained in the box, but imperfect density because there exists non-vulnerable cases in the box. The plot on the right shows the opposite case of perfect density, but coverage less than one. Keep in mind that SOW have more than two observable conditions, and thus the scenario boxes can also exceed two-dimensions, although scenarios with fewer dimensions are generally more interpretable."),
         
         div(style="margin-bottom: 10px"),
         
-        renderText("It is your job to choose a scenario box by clicking on a point in the peeling trajectory. The scenarios will exhibit tradeoffs between density, coverage, and the number of uncertainty metrics used, so use the peeling trajectory along with the scenario box plots to the right to explore."),
+        renderText("It is your job to choose a scenario box by clicking on a point in the peeling trajectory. The scenarios will exhibit tradeoffs between density, coverage, and the number of observable conditions used, so use the peeling trajectory along with the scenario box plots to the right to explore."),
         
         div(style="margin-bottom: 30px"),
         
@@ -348,7 +340,7 @@ absolutePanel(
 Column {data-width=300}
 -----------------------
 
-### Part 1: Select policy, uncertainty metrics, and objectives to plot {data-height=200}
+### Part 1: Select policy, observable conditions, and objectives to plot {data-height=200}
 
 ```{r}
 
@@ -363,10 +355,10 @@ selectInput(inputId = "policyIDcompare",label = "Select policy(s) to compare", c
 
 fluidRow(column(width=9, #fluidRow for dropdown button
 
-           dropdownButton(circle = F, label = "Choose uncertainty metrics",width = "150%",inputId = "UMdropdown",
+           dropdownButton(circle = F, label = "Choose observable conditions",width = "150%",inputId = "UMdropdown", 
 
 fluidRow(column(width=10,
-            selectInput(inputId = "Window", label = "Select rolling window length (years)",choices = c("2", "5", "8", "10", "20", "44", "any"), selected = "10")
+            selectInput(inputId = "Window", label = "Select moving window length (years)",choices = c("2", "5", "8", "10", "20", "44", "any"), selected = "10")
                 ),
          column(width = 1, offset = 0,
             circleButton(inputId = "WindowHelp1", icon = icon("info-circle"), size = "xs")
@@ -374,7 +366,7 @@ fluidRow(column(width=10,
          ),
 
 
-h5("Include duration and frequency metrics?"),
+h5("Include duration metrics?"),
 
   fluidRow(column(width=10,
 
@@ -394,7 +386,7 @@ renderUI({
 
 }),
 
-    renderUI({selectInput("PlotMetrics",label="Select uncertainty metrics to plot", multiple = T, choices=colnames(x$x))})
+    renderUI({selectInput("PlotMetrics",label="Select observable conditions to plot", multiple = T, choices=colnames(x$x))})
 
                ) # end drop down button
 
@@ -412,7 +404,7 @@ div(style="margin-bottom:10px"), # adds padding between buttons
 
 selectInput(inputId = "SOWensemble", label = "Choose SOW ensemble", choices = c("cLHS 300", "cLHS 500"), selected = "cLHS 500"),
 
-selectInput("PlotObj",label="Select objectives to plot", multiple = T, choices=colnames(obj_all)[-c(1,2)]),
+selectInput("PlotObj",label="Select objectives for scenario discovery", multiple = T, choices=colnames(obj_all)[-c(1,2)]),
 
 radioButtons(inputId = "AndOr", label = "Condition for multiple objectives", choices = c("Or", "And"), inline = T)
 
@@ -440,7 +432,7 @@ mainPanel(width = 7,
 
 ####################### tooltips ###########################
 
-# bsTooltip(id = "UMdropdown", title = "Select uncertainty metrics for use in the Scenario Discovery algorithm and for plotting in the scatter matrix to the right. See the tooltips and information buttons for each user entry for more.", placement = "right", options=list(container="body") )
+# bsTooltip(id = "UMdropdown", title = "Select observable conditions for use in the Scenario Discovery algorithm and for plotting in the scatter matrix to the right. See the tooltips and information buttons for each user entry for more.", placement = "right", options=list(container="body") )
 
 bsTooltip(id="DurFreq", title = "These metrics measure both the duration and frequency of high flow years, low flow years, and non-high flow years. One of three different types of thresholds can be selected to define high flow vs low flow. Please use the information button to the right for descriptions of the thresholds and metrics.",  placement = "right", options=list(container="body") )
 
@@ -730,9 +722,9 @@ observeEvent(input$ResetThresholds, {
 Column {.tabset .tabset-fade}
 ------------------------
 
-### Uncertainty metrics
+### Observable conditions
 
-```{r, uncertainty metrics pairs plot}
+```{r, observable conditions pairs plot}
 
 
 renderPlot({
@@ -741,7 +733,7 @@ renderPlot({
 
   validate(need(y$COI, "Use the violin plots to define vulnerability thresholds."))
   validate(need(y$Trigger==1, "Use the violin plots to define vulnerability thresholds."))
-  validate(need(input$PlotMetrics, "Select uncertainty metrics."))
+  validate(need(input$PlotMetrics, "Select observable conditions."))
    validate(need(length(input$PlotMetrics)>1, "Select at least one more metric."))
      validate(need(length(y$COI)==nrow(obj$filter), "Apply thresholds after changing SOW ensemble."))
 
@@ -793,7 +785,7 @@ renderPlot({
 
 ```
 
-```{r, absolute panel Uncertainty metrics}
+```{r, absolute panel observable conditions}
 
 # create the table displayed in the absolute panel
 
@@ -840,30 +832,9 @@ absolutePanel(class = "panel panel-default", fixed = T,
             div(style="margin-bottom:5px"),
             actionButton(inputId= "openModal",label = "Open plot settings", icon=icon("cog"), width = "160px"),
             div(style="margin-bottom:5px"),
-            
-            # renderUI({
-            #   
-            #   req(y$COI)
-            # 
-            #   actionButton(inputId = "gotoSD1",label = "Go to Scenario Discovery", onclick="location.href='#section-perform-scenario-discovery';", width = "180px")
-            #   
-            #   # actionButton(inputId = "gotoSD1",label = "Go to Scenario Discovery", onclick="location.href='#section-b-perform-scenario-discovery';", width = "180px")
-            #     
-            # }),
-            
             div(style="margin-bottom:5px")
             
             )
-   
-
-   #,
-
-
-      # HTML('<button data-toggle="collapse" data-target="#box3" class="btn-block btn-danger">spinny thing</button>'),
-      # tags$div(id = 'box3', class="collapse in",
-      # 
-      #     p %>% layout(height=200)
-      # )
 
    )
 
@@ -961,17 +932,7 @@ absolutePanel(class = "panel panel-default", fixed = T,
             actionButton(inputId= "openModalObj",label = "Open plot settings", icon=icon("cog"), width = "160px"),
             div(style="margin-bottom:5px")
             )
-   
-   
-   
-   #,
 
-
-           # HTML('<button data-toggle="collapse" data-target="#box3" class="btn-block btn-danger">spinny thing</button>')#,
-      # tags$div(id = 'box3', class="collapse in",
-      #
-      #     p %>% layout(height=200)
-      # )
 
    )
 
@@ -992,10 +953,22 @@ bsModal(id = "PlotSettingsSD", title = "Scenario Discovery settings",trigger = "
         
         hr(),
 
-        h5("Choose PRIM algorithm type:"),
-prettyToggle(inputId = "PRIMType",label_on = "normal PRIM",label_off = "multi-objective PRIM", value = FALSE),
+          fluidRow(column(width=5,
+                  
+              h5("Choose PRIM algorithm type:"),
+prettyToggle(inputId = "PRIMType",label_on = "normal PRIM",label_off = "multi-objective PRIM", value = FALSE)            
+                  ), column(width=5, 
+                            
+               radioButtons(inputId = "peel_crit", label = "Peeling objective function", choices = c(1, 2, 3), selected = 2, width=250, inline=TRUE)             
+                            )),
 
-        sliderInput(inputId = "QPval",label = "multi-objective PRIM p-value", min = 0.01, max = 0.5, value = 0.1, ticks = F, width="200px"),
+        fluidRow(column(width=5,
+                        
+                 sliderInput(inputId = "QPval",label = "multi-objective PRIM p-value", min = 0.01, max = 0.5, value = 0.1, ticks = F, width="200px")       
+                        ), column(width=5,
+                                  
+                sliderInput(inputId = "PeelAlpha",label = "PRIM peeling parameter", min = 0.01, max = 1, value = 0.05, ticks = F, width="200px")                  
+                                  )),
 
         h3("Scenario boxes plot settings"),
 
@@ -1049,9 +1022,11 @@ bsTooltip(id = "PRIMType", title = "Multi-objective PRIM differs from normal PRI
 
 bsTooltip(id = "QPval", title = "Select the p-value threshold metrics must satisfy to be used with multi-objective PRIM. A higher p-value generally results in more metrics being used, but with more potential for over-fitting the data.", placement = "right", options=list(container="body"))
 
+bsTooltip(id = "PeelAlpha", title = "The PRIM peeling parameter controls how patiently the algorithm peels away from the input space, where larger values are less patient and smaller values are more patient.",  placement = "right", options=list(container="body") )
+
+bsTooltip(id = "peel_crit", title = "You can select from three objective functions for PRIM to create scenario boxes. Objective 1 is to maximize density inside the box. Objective 2 is to maximize density normalized by the support of the peeled box. Objective 3 is to minimize the number of non-vulnerable cases in the box being peeled away. For more information, see Friedman and Fisher 1999, equation 2.4 and section 14.1   ",  placement = "right", options=list(container="body") )
+
 ```
-
-
 
 Column {data-width=225}
 ----------------------
@@ -1073,7 +1048,7 @@ observeEvent(list(input$policyID, input$SOWensemble) , {
 
 ```
 
-### {data-height=225}
+### {data-height=350}
 
 ```{r, user interface, include=TRUE}
 
@@ -1103,6 +1078,7 @@ sidebarPanel(width=5, style={"margin-left: -20px; margin-right: -20px; margin-to
   div(style="margin-bottom:20px"),
   
   # h4(strong("Plot settings"),  style="margin-top: 10px"),
+  
   
   actionButton(inputId = "OpenPlotSettingsSD", width="98%", label="PRIM and plot settings", icon = icon("cog")),
   
@@ -1139,7 +1115,7 @@ observeEvent(input$PRIMType, {
 
 mainPanel(width=7,
           
-  h4(strong("Vulnerability statistics")),
+  h5(strong("Vulnerability statistics")),
 
   HTML('<button data-toggle="collapse" data-target="#boxPTa" class="btn-block btn-primary">Policy ID</button>'),
       tags$div(id = 'boxPTa', class="collapse in", align="center",
@@ -1174,117 +1150,14 @@ mainPanel(width=7,
   )
 
 
-# fluidRow(column(width=5,
-#   
-#   div(style="margin-bottom:40px"),              
-#                 
-#   actionButton(inputId = "OpenModalSD", width="230px", label="Scenario Discovery settings", icon = icon("cog")),
-#   
-#   # circleButton(inputId = "OpenModalSD", icon = icon("cog"), size = "sm"),
-#   
-#   div(style="margin-bottom:20px"),
-#   
-#   actionButton(inputId = "SDButton",label = "Perform scenario discovery", width = "230px")             
-#                 
-#                 ),
-#   column(width=7, offset=0,
-#          
-#   h4(strong("Vulnerability statistics")),
-# 
-#   HTML('<button data-toggle="collapse" data-target="#boxPT" class="btn-block btn-primary">number of vulnerable SOW</button>'),
-#       tags$div(id = 'boxPT', class="collapse in", align="center",
-# 
-#         renderText(paste0(y$nCOI, " / ", nrow(x$x)))),
-# 
-#    HTML('<button data-toggle="collapse" data-target="#boxPT2" class="btn-block btn-primary">Objective: threshold</button>'),
-#    tags$div(id = 'boxPT2', class="collapse in",
-# 
-#       renderTable(thresholds$table)
-#       
-# 
-#       )
-#   
-#   
-#     )
-#   
-#   )
-
-
-
-
-# bsTooltip(id = "OpenModalSD", placement = "right", title="select Scenario Discovery options",options=list(container="body"))
-
-# bsModal(id = "ModalSD", title = "Select PRIM inputs and algorithm",trigger = "OpenModalSD",
-#         
-#         h5("Choose PRIM algorithm type:"),
-# prettyToggle(inputId = "PRIMType",label_on = "normal PRIM",label_off = "multi-objective PRIM", value = FALSE),
-#         
-# #         selectInput(inputId = "Window", label = "Select rolling window length (years)",choices = c("2", "5", "8", "10", "20", "44", "any"), selected = "10"),
-# # 
-# # h5("Include duration and frequency metrics?"),
-# # prettyToggle(inputId = "DurFreq",label_on = "Include",label_off = "Exclude", value = TRUE),
-# # 
-# # renderUI({
-# #   req(input$DurFreq==TRUE)
-# #   
-# #     selectInput(inputId = "QThreshType",label = "High vs low flow year definition type", choices = c("historical", "terciles", "mean & standard deviation"), selected = "historical")
-# #   
-# # }),
-# 
-# 
-# selectInput(inputId = "SOWensemble", label = "Choose SOW ensemble", choices = c("cLHS 300", "cLHS 500"), selected = "cLHS 500")
-# 
-# 
-#         )
-
-
-
-
-# observeEvent({list(input$policyID, input$COIButton, input$Window, input$PRIMType, input$SOWensemble)}, {
-#   
-#   showNotification("Inputs have changed. Please run scenario discovery.", duration = NULL, type = "warning")
-#   
-# }, ignoreInit = T)
 
 ```
 
-```{r, absolute panel on PT page}
-
-# absolutePanel(class = "panel panel-default", fixed = T,
-#                 draggable = TRUE, top = 62, left = 318, right ="auto", bottom = "auto",
-#                 width = '13%', height = 'auto',
-#                 style = "overflow-y:scroll; max-height: 142px; opacity: 0.9; style = z-index: 400",
-# 
-#               h4(strong("Vulnerability statistics")),
-# 
-#       HTML('<button data-toggle="collapse" data-target="#box1" class="btn-block btn-primary">number of vulnerable SOW</button>'),
-#       tags$div(id = 'box1', class="collapse in", align="center",
-# 
-#         renderText(paste0(y$nCOI, " / ", nrow(x$x)))),
-# 
-#    HTML('<button data-toggle="collapse" data-target="#box2" class="btn-block btn-primary">Objective: threshold</button>'),
-#    tags$div(id = 'box2', class="collapse in",
-# 
-#       renderTable(thresholds$table)
-#       )
-#    #,
-# 
-# 
-#            # HTML('<button data-toggle="collapse" data-target="#box3" class="btn-block btn-danger">spinny thing</button>')#,
-#       # tags$div(id = 'box3', class="collapse in",
-#       #
-#       #     p %>% layout(height=200)
-#       # )
-# 
-#    )
-# 
-
-```
 
 ```{r, choose SOW ensemble}
 
 SOW_all=SOW_500_300_100[[1]]$SOW
-SOW_all=dplyr::select(SOW_all, -matches("RolDef."))
+SOW_all=dplyr::select(SOW_all, -matches(c("RolDef.", "median", ".Freq", "min", "max")))
 
 # initialize as cLHS 500
 x=reactiveValues(ensemble=SOW_all, keep=colnames(SOW_all[, -c(4,5)]), x=SOW_all[, -c(4,5)], obj=obj_all)
@@ -1295,7 +1168,7 @@ observeEvent(input$SOWensemble, {
   
   x$x=x$ensemble[, -c(4,5)]# remove Hydro Scenario and trace number
   
-  x$x=dplyr::select(x$x, -matches("RolDef."))
+  x$x=dplyr::select(x$x, -matches(c("RolDef.", "median", ".Freq", "min", "max")))
   
   x$x=x$x[,x$keep] # subset by metrics user has selected
   
@@ -1315,7 +1188,7 @@ observeEvent(input$SOWensemble, {
 
 observeEvent(input$SOWensemble !=update$currentEnsemble, { # want to ignore initiliaztion for the update trigger
   
-  cat(file=stderr(), 'ensembles:', c(input$SOWensemble, update$currentEnsemble), "\n")
+  # cat(file=stderr(), 'ensembles:', c(input$SOWensemble, update$currentEnsemble), "\n")
   
   req(input$SOWensemble !=update$currentEnsemble)
   
@@ -1329,7 +1202,7 @@ observeEvent(input$SOWensemble !=update$currentEnsemble, { # want to ignore init
 
 ```
 
-```{r, filter uncertainty metrics by UI}
+```{r, filter observable conditions by UI}
 
 
 ### window length filter
@@ -1338,7 +1211,7 @@ observeEvent(input$Window,{
   
   yr=paste0(input$Window, "yr")
   
-  always_keep=c("Demand", "Mead.PE", "Powell.PE", "min", "max")
+  always_keep=c("Demand", "Mead.PE", "Powell.PE")
   
   if(yr=="anyyr"){
     # do nothing
@@ -1347,7 +1220,7 @@ observeEvent(input$Window,{
     
     # keep=colnames(SOW_all)[grep(pattern="Q", x = colnames(SOW_all))] # Frequency and duration of high vs low flow years
     
-    cols=c(always_keep, "mean", "median")
+    cols=c(always_keep, "mean")
     
     x$window=cols
     
@@ -1499,12 +1372,12 @@ observeEvent(input$SDButton, {
   
   if(input$PRIMType==FALSE){ # MO PRIM
    
-      box$Data=MO.PRIM(x=x$x, y=y$COI, qp_val=input$QPval, peel_crit = 2)
+      box$Data=MO.PRIM(x=x$x, y=y$COI, qp_val=input$QPval, peel_crit = as.numeric(input$peel_crit), peel_alpha=input$PeelAlpha)
 
 
   } else {
     
-    temp=prim(x=x$x, y=y$COI, peel_crit = 2, remove_dims = T)
+    temp=prim(x=x$x, y=y$COI, peel_crit = as.numeric(input$peel_crit), remove_dims = T, peel.alpha=input$PeelAlpha)
     
      dimensions=vector()
         for (i in 1:length(temp$dimlist)){
@@ -1532,8 +1405,6 @@ observeEvent(input$SDButton, {
     update$AndOr2=0
     
 })
-
-# boxData=multiobjective_prim(x=x, y=y, qp_val=.12)
 
 ```
 
@@ -1564,13 +1435,6 @@ fluidRow(column(width = 10, offset = 0,
          )
 hr(style="margin-botom: 0px; margin-top: 5px; margin-left: -10px", width="110%")
 
-# dimensions=vector()
-# for (i in 1:length(boxData$dimlist)){
-#   dimensions[i]=sum(boxData$dimlist[[i]]$either)
-# }
-
-# data=data.frame(coverage=boxData$relcoverage, density=boxData$y.mean, dimensions, id=1:length(boxData$x))
-
 output$dynamic=renderPlotly({
   
   box$PlotTrigger
@@ -1594,9 +1458,7 @@ output$dynamic=renderPlotly({
   
   dynamic
   
-  # dynamic=layout(p=dynamic, legend=list(title=list(font=list(size=10), side="left")))
-  # 
-  # dynamic
+
   
 })
 
@@ -1607,8 +1469,6 @@ plotlyOutput("dynamic")
 observeEvent(eventExpr = event_data("plotly_click", source = "PT"),{
 
   temp=event_data("plotly_click", source = "PT")
-  
-  # box$ID=temp$pointNumber+1 # plus one because plotly.js is zero indexed, R is 1 indexed
   
   box$ID=temp$customdata
   
@@ -1667,7 +1527,7 @@ save=reactiveValues() # create reactive value to save range_plot. It can then be
 
 renderPlot({
 
-validate(need(x$x, "Select uncertainty metrics on the Define vulnerability page."))
+validate(need(x$x, "Select observable conditions on the Define vulnerability page."))
 validate(need(y$COI, "Define vulnerability thresholds using the violin plots on the Define vulnerability page."))
 validate(need(box$Data, 'Perform scenario discovery then select a point from the peeling trajectory.'))
   
@@ -1854,9 +1714,6 @@ fluidRow(column(width=3,
                             
                           )
 
-#,  style = "
-# position:absolute;
-# z-index: 1000;"
          )
 
 )
@@ -1881,19 +1738,10 @@ output$DV1=renderPlotly({
   
   data=database[[input$saved1]]
   
-  cat(file=stderr(), 'ID', data$ID, "\n")
+  # cat(file=stderr(), 'ID', data$ID, "\n")
   
   DV_plot(to_plot=data$ID, metric_label="order", preferred_direction="min", y_axis2=F)
 }) 
-
-# fluidRow(column(width=9, offset=2,
-#      
-#   renderUI({
-#   selectInput(inputId = "saved1",label = h4(strong("Choose scenario to display")), choices = c("Select analysis", names(database)), selected = NULL, width = "350px")
-# })  
-#     )
-# 
-#       )
 
 div(style="margin-bottom: 10px")
 
@@ -1931,7 +1779,7 @@ fluidRow(column(width = 10, offset = 1,
   
   div(align="center", h5(strong("Lake Mead operation diagram")))
   
-  # splitLayout(cellWidths = c("20%","70%", "10%"),h5(""),h5(strong("Lake Mead operation diagram")), circleButton(inputId = "HideMead", icon=icon("caret-down"), size = "xs"))
+ 
 
 ))
 
@@ -1939,13 +1787,10 @@ fluidRow(column(width = 10, offset = 1,
 
 
 fluidRow(column(width = 10, offset = 0,
-                
-#HTML('<button data-toggle="collapse"  data-target="#DV1" " Show/Hide/button>'),
- #  tags$div(id = 'DV1', class="collapse", style= "width: 440px",
 
       plotlyOutput("DV1")
       
-      #)              
+                    
   )
 )
  
@@ -2042,19 +1887,11 @@ output$DV2=renderPlotly({
   
   data=database[[input$saved2]]
   
-  cat(file=stderr(), 'ID', data$ID, "\n")
+  # cat(file=stderr(), 'ID', data$ID, "\n")
   
   DV_plot(to_plot=data$ID, metric_label="order", preferred_direction="min", y_axis2=F)
 }) 
 
-# fluidRow(column(width=9, offset=2,
-#      
-#   renderUI({
-#   selectInput(inputId = "saved2",label = h4(strong("Choose scenario to display")), choices = c("Select analysis", names(database)), selected = NULL, width = "350px")
-# })  
-#     )
-# 
-#       )
 
 div(style="margin-bottom: 10px")
 
@@ -2090,7 +1927,7 @@ fluidRow(column(width = 10, offset = 1,
   
   div(align="center", h5(strong("Lake Mead operation diagram")))
   
-  # splitLayout(cellWidths = c("20%","70%", "10%"),h5(""),h5(strong("Lake Mead operation diagram")), circleButton(inputId = "HideMead", icon=icon("caret-down"), size = "xs"))
+  
 
 ))
 
@@ -2099,12 +1936,8 @@ fluidRow(column(width = 10, offset = 1,
 
 fluidRow(column(width = 10, offset = 0,
                 
-#HTML('<button data-toggle="collapse"  data-target="#DV2" " Show/Hide/button>'),
-   #tags$div(id = 'DV2', class="collapse", style= "width: 440px",
-
       plotlyOutput("DV2")
-      
-      #)              
+            
   )
 )
  
@@ -2199,20 +2032,11 @@ output$DV3=renderPlotly({
   
   data=database[[input$saved3]]
   
-  cat(file=stderr(), 'ID', data$ID, "\n")
+  # cat(file=stderr(), 'ID', data$ID, "\n")
   
   DV_plot(to_plot=data$ID, metric_label="order", preferred_direction="min", y_axis2=F)
 }) 
 
-
-# fluidRow(column(width=9, offset=2,
-#      
-#   renderUI({
-#   selectInput(inputId = "saved3",label = h4(strong("Choose scenario to display")), choices = c("Select analysis", names(database)), selected = NULL, width = "350px")
-# })  
-#     )
-# 
-#       )
 
 div(style="margin-bottom: 10px")
 
@@ -2250,7 +2074,6 @@ fluidRow(column(width = 10, offset = 1,
   
   div(align="center", h5(strong("Lake Mead operation diagram")))
   
-  # splitLayout(cellWidths = c("20%","70%", "10%"),h5(""),h5(strong("Lake Mead operation diagram")), circleButton(inputId = "HideMead", icon=icon("caret-down"), size = "xs"))
 
 ))
 
@@ -2258,13 +2081,10 @@ fluidRow(column(width = 10, offset = 1,
 
 
 fluidRow(column(width = 10, offset = 0,
-                
-#HTML('<button data-toggle="collapse"  data-target="#DV3" " Show/Hide/button>'),
-   #tags$div(id = 'DV3', class="collapse", style= "width: 440px",
+
 
       plotlyOutput("DV3")
-      
-      #)              
+           
   )
 )
  
@@ -2359,20 +2179,11 @@ output$DV4=renderPlotly({
   
   data=database[[input$saved4]]
   
-  cat(file=stderr(), 'ID', data$ID, "\n")
+  # cat(file=stderr(), 'ID', data$ID, "\n")
   
   DV_plot(to_plot=data$ID, metric_label="order", preferred_direction="min", y_axis2=F)
 }) 
 
-
-# fluidRow(column(width=9, offset=2,
-#      
-#   renderUI({
-#   selectInput(inputId = "saved4",label = h4(strong("Choose scenario to display")), choices = c("Select analysis", names(database)), selected = NULL, width = "350px")
-# })  
-#     )
-# 
-#       )
 
 div(style="margin-bottom: 10px")
 
@@ -2410,7 +2221,6 @@ fluidRow(column(width = 10, offset = 1,
   
   div(align="center", h5(strong("Lake Mead operation diagram")))
   
-  # splitLayout(cellWidths = c("20%","70%", "10%"),h5(""),h5(strong("Lake Mead operation diagram")), circleButton(inputId = "HideMead", icon=icon("caret-down"), size = "xs"))
 
 ))
 
@@ -2419,12 +2229,9 @@ fluidRow(column(width = 10, offset = 1,
 
   fluidRow(column(width = 10, offset = 0,
                 
-#HTML('<button data-toggle="collapse"  data-target="#DV4" " Show/Hide/button>'),
-   #tags$div(id = 'DV4', class="collapse", style= "width: 440px",
 
       plotlyOutput("DV4")
-      
-      #)              
+        
   )
 )
  
