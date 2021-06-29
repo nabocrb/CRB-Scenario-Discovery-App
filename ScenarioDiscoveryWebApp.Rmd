@@ -179,7 +179,7 @@ output$UMtable=renderImage({
           filename <- normalizePath("images/Uncertainty metrics table.png")
 
 
-          list(src=filename, width="570px", height="650px")
+          list(src=filename, width="570px", height="520px")
 
         }, deleteFile = F)
 
@@ -1157,7 +1157,10 @@ mainPanel(width=7,
 ```{r, choose SOW ensemble}
 
 SOW_all=SOW_500_300_100[[1]]$SOW
-SOW_all=dplyr::select(SOW_all, -matches(c("RolDef.", "median", ".Freq", "min", "max")))
+SOW_all=dplyr::select(SOW_all, -matches(c("RolDef.", "median", ".Freq", "min")))
+SOW_all=dplyr::select(SOW_all, -"max")
+
+
 
 # initialize as cLHS 500
 x=reactiveValues(ensemble=SOW_all, keep=colnames(SOW_all[, -c(4,5)]), x=SOW_all[, -c(4,5)], obj=obj_all)
@@ -1168,8 +1171,9 @@ observeEvent(input$SOWensemble, {
   
   x$x=x$ensemble[, -c(4,5)]# remove Hydro Scenario and trace number
   
-  x$x=dplyr::select(x$x, -matches(c("RolDef.", "median", ".Freq", "min", "max")))
-  
+  x$x=dplyr::select(x$x, -matches(c("RolDef.", "median", ".Freq", "min")))
+  x$x=dplyr::select(x$x, -"max")
+
   x$x=x$x[,x$keep] # subset by metrics user has selected
   
   
