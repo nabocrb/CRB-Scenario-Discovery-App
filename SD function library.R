@@ -15,6 +15,7 @@ library(cowplot)
 library(rlang) # as_string
 library(stringr)
 library(forcats) # to order violin plots according to user input
+library(ggnewscale)
 
 ############################## data ###############################
 
@@ -689,9 +690,7 @@ prim=function(x,y, thresh=NULL, box.init = NULL, peel.alpha = .05, paste.alpha =
       significant=unique(significant) # use unique() to remove duplicates
       
     }
-    # significant=c("Driest10yrAVG", "LowQ.MaxDur.hist")
-    
-    
+
     # use combn() to create all combinations of 1 to D significant dimensions
     combos=list()
     
@@ -932,7 +931,7 @@ prim=function(x,y, thresh=NULL, box.init = NULL, peel.alpha = .05, paste.alpha =
   
   DV_plot=function(long.data=long_data, wide.data=wide_data, metric= optimization,
                    to_plot=input$policyID, metric_label='order', preferred_direction='min', y_axis2=F,
-                   labelsize=3, show_legend=F){ #labelsize=delayFontSlider()
+                   labelsize=3, show_legend=F, height=275){ #labelsize=delayFontSlider()
     
     # filter for chosen policies
     # filter.long=dplyr::filter(long.data, policy %in% to_plot)
@@ -1001,7 +1000,7 @@ prim=function(x,y, thresh=NULL, box.init = NULL, peel.alpha = .05, paste.alpha =
     bar_plot=addSmallLegend(bar_plot)
     # ggtitle(paste(metric_label, 'rank for selected policies', sep=' '))+
     
-    int_plot=ggplotly(p=bar_plot,height=290, tooltip = c('rank','elevation', 'volume'), dynamicTicks=T, originalData=F) # convert ggplot to interactive plotly html
+    int_plot=ggplotly(p=bar_plot,height=height, tooltip = c('rank','elevation', 'volume'), dynamicTicks=T, originalData=F) # convert ggplot to interactive plotly html
     # add legend title in correct location
     int_plot=int_plot %>%   layout(legend = list(
       orientation = "v", title=list(text=" Tier "))
@@ -1107,6 +1106,144 @@ prim=function(x,y, thresh=NULL, box.init = NULL, peel.alpha = .05, paste.alpha =
     
     
   }
+
+  
+  SD_plot2=function(data, mapping, COI=COI, box_lims=box_lims, npolicy, name_vec){
+    
+    
+    # if (is.data.frame(box_lims)){
+    #   box_lims=list(box_lims)
+    # }
+    
+    xName=as_string(mapping$x[[2]])
+    yName=as_string(mapping$y[[2]])
+    
+    #cat(file=stderr(), 'x,y:', c(xName, yName), "\n")
+    
+
+    if(npolicy==1){ # 1 policy
+      
+      box_cols=c("black", "red", "purple", "green", "brown", "orange", "yellow", "black")
+      my_cols=c("No"="blue", "Yes"="red")
+      my_shapes=NULL
+      
+    } else { # 2 policies
+      
+      
+      box_cols=c("black", "red", "purple", "green", "brown", "orange", "yellow", "black")
+      my_cols=c("First policy vulnerable"="purple", "Second policy vulnerable"="green", "Both vulnerable"= "red", "Neither vulnerable"= "blue")
+      my_shapes=c("First policy vulnerable"=15, "Second policy vulnerable"=18, "Both vulnerable"= 17, "Neither vulnerable"= 20)
+      
+    }
+    
+    my_size=1
+    
+    cat(file=stderr(), 'box_lims', length(box_lims), "\n")
+
+
+    # draw scatter plot, no scenarios 
+    p=ggplot(data, mapping)+
+      geom_point(alpha=0.3, size=5)+
+      scale_colour_manual(values=my_cols)+
+      scale_shape_manual(values=my_shapes)+
+      scale_fill_manual(values=my_cols)+
+      new_scale("fill")+
+      new_scale("color")
+    
+    for (i in 1:length(box_lims)){ # add scenarios
+      xTF= xName %in% colnames(box_lims[[i]]) # true if x metric is contained in scenario
+      yTF= yName %in% colnames(box_lims[[i]]) # true if y metric is contained in scenario
+      
+      if (xTF==F & yTF==F){ # neither x nor y is contained in this scenario
+        # plot no scenarios
+      } else if (xTF & yTF ==F){ # vertical line only
+        
+        xmin=box_lims[[i]][[xName]][1]
+        xmax=box_lims[[i]][[xName]][2]
+        
+        p=p+
+          geom_vline(xintercept=xmin, color=box_cols[i], size=my_size)+
+          geom_vline(xintercept=xmax, color=box_cols[i], size=my_size)#+
+          # geom_text(x=1.009*xmin, y=1.1*min(data[[yName]]),label=name_vec[i],color=box_cols[i], angle=90, inherit.aes =T, show.legend = F)
+        
+      } else if (xTF==F & yTF){# horizontal line only
+        
+        ymin=box_lims[[i]][[yName]][1]
+        ymax=box_lims[[i]][[yName]][2]
+        
+        p=p+
+          geom_hline(yintercept=ymin, color=box_cols[i], size=my_size)+
+          geom_hline(yintercept=ymax, color=box_cols[i], size=my_size)#+
+          # geom_text(x=1.1*min(data[[xName]]), y=.95*ymax,label=name_vec[i], color=box_cols[i], inherit.aes = T, show.legend = F)
+        
+        
+      } else { # draw box
+        
+        p=p+
+          annotate(geom="rect", xmin=box_lims[[i]][[xName]][1], xmax=box_lims[[i]][[xName]][2],
+                   ymin=box_lims[[i]][[yName]][1], ymax=box_lims[[i]][[yName]][2], colour=box_cols[i], alpha=0, size=my_size )#+
+          # geom_text(x=1.009*box_lims[[i]][[xName]][1], y=box_lims[[i]][[yName]][2], label=name_vec[i], hjust="left", vjust="top", color=box_cols[i], show.legend = F)
+
+          # geom_rect(colour=box_cols[i],xmin=box_lims[[i]][[xName]][1], xmax=box_lims[[i]][[xName]][2],
+          #          ymin=box_lims[[i]][[yName]][1], ymax=box_lims[[i]][[yName]][2], aes(fill=name_vec[i]) , alpha=0, size=my_size )+
+          # scale_fill_manual(values=box_cols[i], labels=name_vec[i])+
+          # new_scale("fill")+new_scale_color()
+
+          
+        
+        
+      }
+
+      
+    }
+  
+    return(p)
+    
+  }
+  
+  ############ create dummy rectangle plot to steal legend from ################
+  
+  scenario_legend=function(scen_names=TDcalcs$scen_names, colors=c("black", "red", "purple", "green", "brown", "orange", "yellow", "pink"),
+                           size=1){
+    
+    xl=seq(1,10, length.out = length(scen_names))
+    xh=seq(10, 10, length.out = length(scen_names)) 
+    yl=seq(1,10, length.out = length(scen_names))
+    yh=seq(10, 10, length.out = length(scen_names))
+    
+    legend.df=data.frame(xl, xh, yl, yh, Scenario=scen_names)
+    
+    if(length(scen_names)>=length(colors)){
+      scen_names=scen_names[1:length(colors)]
+    } else {
+      
+      start_index=length(scen_names)+1
+      
+      for(i in start_index:length(colors)){
+        
+        scen_names[i]=paste0("dummy",i)
+        
+        
+      }
+    }
+  
+    names(colors)=scen_names
+
+    p=ggplot(data = legend.df, mapping=aes(fill=Scenario, color=Scenario))+
+      geom_rect(xmin=xl, xmax=xh, ymin=yl, ymax=yh, alpha=0, size=size)+
+      scale_fill_manual(values=colors)+
+      scale_color_manual(values=colors)
+    
+    p=p+theme(legend.key = element_rect(fill = "transparent", colour = "transparent"),
+                          rect = element_rect(fill = "white"), legend.title=element_text(size=16), legend.text=element_text(size=14)) # make legend background transparent
+    
+    p=get_legend(p) #steal legend
+    p=as_ggplot(p) # convert to ggplot
+    
+    return(p)
+    
+  }
+  
   
   ############ modified ggpairs diagonal plot (just changing the colors) ################
   
@@ -1117,6 +1254,7 @@ prim=function(x,y, thresh=NULL, box.init = NULL, peel.alpha = .05, paste.alpha =
   
   
 modified_points=function(data, mapping, ...){
+
   my_cols=c("No"="blue", "Yes"="red")
 
   ggplot(data, mapping)+
@@ -1125,6 +1263,28 @@ modified_points=function(data, mapping, ...){
   
   
 }
+
+modified_points2=function(data, mapping, ...){
+  my_cols=c("First policy vulnerable"="purple", "Second policy vulnerable"="green", "Both vulnerable"= "red", "Neither vulnerable"= "blue")
+  my_shapes=c("First policy vulnerable"=15, "Second policy vulnerable"=18, "Both vulnerable"= 17, "Neither vulnerable"= 20)
+  
+  ggplot(data, mapping)+
+    geom_point(alpha=0.3, size=5)+
+    scale_colour_manual(values=my_cols)+
+    scale_shape_manual(values=my_shapes)+
+    scale_fill_manual(values=my_cols)
+  
+}
+
+modified_density2 = function(data, mapping, ...) {
+
+  my_cols=c("First policy vulnerable"="purple", "Second policy vulnerable"="green", "Both vulnerable"= "red", "Neither vulnerable"= "blue")
+
+  ggally_densityDiag(data, mapping, ...)+
+    scale_fill_manual(values=my_cols)
+}
+
+
 
 ########################### function to remove extra ggpairs labels when diagonal not wanted ##############
 
