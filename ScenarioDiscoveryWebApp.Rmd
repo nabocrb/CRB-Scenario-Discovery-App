@@ -1852,6 +1852,21 @@ output$Download1=downloadHandler(filename =function(){paste0(input$saved1, ".rds
   saveRDS(database$names[[input$saved1]], file)
   })
 
+output$Download2=downloadHandler(filename =function(){paste0(input$saved2, ".rds")},content = function(file){
+
+  saveRDS(database$names[[input$saved2]], file)
+  })
+
+output$Download3=downloadHandler(filename =function(){paste0(input$saved3, ".rds")},content = function(file){
+
+  saveRDS(database$names[[input$saved3]], file)
+  })
+
+output$Download4=downloadHandler(filename =function(){paste0(input$saved4, ".rds")},content = function(file){
+
+  saveRDS(database$names[[input$saved4]], file)
+  })
+
 
 
 ################# delete #####################
