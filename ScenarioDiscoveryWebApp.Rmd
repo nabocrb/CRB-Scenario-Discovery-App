@@ -1348,7 +1348,7 @@ observeEvent(x$keep,{ # if column names are updated, update x$x
   
   x$x=x$ensemble[, x$keep]
   
-  cat(file=stderr(), 'x$keep', x$keep, "\n")  
+  #cat(file=stderr(), 'x$keep', x$keep, "\n")  
 
   
 }, ignoreInit = F)
@@ -1468,8 +1468,6 @@ observeEvent(input$SDButton, {
     
     box$PlotTrigger=box$PlotTrigger+1
     
-    showNotification("Plotting")
-  
     update$PRIMalg=0 #remove asterisks from button and PT title
     update$thresholds2=0
     update$ensemble2=0
@@ -2489,14 +2487,13 @@ renderPlot({
   }, width = 450, height = 900)   
 ```
 
-Top-down scenario imposition {data-orientation=columns}
+Create & view scenarios {data-orientation=columns, style="position:relative;"}
 ================================
 
 Inputs {.sidebar data-width=500}
 --------------------------------
 
 ```{r top-down scenario inputs}
-
 
 
 fluidRow(column(width=6, #style='margin-bottom:15px;margin-right: 0px; border:1px solid; padding: 10px;',
@@ -2507,10 +2504,11 @@ fluidRow(column(width=6, #style='margin-bottom:15px;margin-right: 0px; border:1p
     
     renderUI({
     req(length(input$TDmetrics) >=1)
-      
-    #my_step=if(grep(pattern = "Q.",x = input$TDmetrics[1])){0.5} else {NULL}
+    
+    my_step=if(str_detect(pattern = "MaxDur.",string = input$TDmetrics[1])){0.5} else{NULL}
 
-    sliderInput("TDmetric1", label=paste0(input$TDmetrics[1], " range"),# step = my_step,
+    sliderInput("TDmetric1", label=paste0(input$TDmetrics[1], " range"),
+                step = my_step,
                 min=round(min(SOW_all[[input$TDmetrics[1]]]),2),
                 max=round(max(SOW_all[[input$TDmetrics[1]]]), 2), value=round(c(min(SOW_all[[input$TDmetrics[1]]]),max(SOW_all[[input$TDmetrics[1]]])),2), ticks = F
                 )
@@ -2520,9 +2518,9 @@ fluidRow(column(width=6, #style='margin-bottom:15px;margin-right: 0px; border:1p
     renderUI({
     req(length(input$TDmetrics) >=2)
       
-    #my_step=if(grep(pattern = "Q.",x = input$TDmetrics[2])){0.5}else {NULL}
+    my_step=if(str_detect(pattern = "MaxDur.",string = input$TDmetrics[2])){0.5} else{NULL}
       
-    sliderInput("TDmetric2", label=paste0(input$TDmetrics[2], " range"),# step = my_step,
+    sliderInput("TDmetric2", label=paste0(input$TDmetrics[2], " range"), step = my_step,
                 min=round(min(SOW_all[[input$TDmetrics[2]]]),2),
                 max=round(max(SOW_all[[input$TDmetrics[2]]]), 2), value=round(c(min(SOW_all[[input$TDmetrics[2]]]),max(SOW_all[[input$TDmetrics[2]]])),2), ticks = F
                 )
@@ -2531,7 +2529,11 @@ fluidRow(column(width=6, #style='margin-bottom:15px;margin-right: 0px; border:1p
     }),
     renderUI({
     req(length(input$TDmetrics) >=3)
-    sliderInput("TDmetric3", label=paste0(input$TDmetrics[3], " range"), min=round(min(SOW_all[[input$TDmetrics[3]]]),2),
+      
+    my_step=if(str_detect(pattern = "MaxDur.",string = input$TDmetrics[3])){0.5} else{NULL}
+
+    sliderInput("TDmetric3", label=paste0(input$TDmetrics[3], " range"), step = my_step,
+                min=round(min(SOW_all[[input$TDmetrics[3]]]),2),
                 max=round(max(SOW_all[[input$TDmetrics[3]]]), 2), value=round(c(min(SOW_all[[input$TDmetrics[3]]]),max(SOW_all[[input$TDmetrics[3]]])),2), ticks = F
                 )
     
@@ -2539,7 +2541,11 @@ fluidRow(column(width=6, #style='margin-bottom:15px;margin-right: 0px; border:1p
     }),
     renderUI({
     req(length(input$TDmetrics) >=4)
-    sliderInput("TDmetric4", label=paste0(input$TDmetrics[4], " range"), min=round(min(SOW_all[[input$TDmetrics[4]]]),2),
+      
+    my_step=if(str_detect(pattern = "MaxDur.",string = input$TDmetrics[4])){0.5} else{NULL}
+
+    sliderInput("TDmetric4", label=paste0(input$TDmetrics[4], " range"), step = my_step,
+                min=round(min(SOW_all[[input$TDmetrics[4]]]),2),
                 max=round(max(SOW_all[[input$TDmetrics[4]]]), 2), value=round(c(min(SOW_all[[input$TDmetrics[4]]]),max(SOW_all[[input$TDmetrics[4]]])),2), ticks = F
                 )
     
@@ -2547,7 +2553,11 @@ fluidRow(column(width=6, #style='margin-bottom:15px;margin-right: 0px; border:1p
     }),
     renderUI({
     req(length(input$TDmetrics) >=5)
-    sliderInput("TDmetric5", label=paste0(input$TDmetrics[5], " range"), min=round(min(SOW_all[[input$TDmetrics[5]]]),2),
+      
+    my_step=if(str_detect(pattern = "MaxDur.",string = input$TDmetrics[5])){0.5} else{NULL}
+
+    sliderInput("TDmetric5", label=paste0(input$TDmetrics[5], " range"), step = my_step,
+                min=round(min(SOW_all[[input$TDmetrics[5]]]),2),
                 max=round(max(SOW_all[[input$TDmetrics[5]]]), 2), value=round(c(min(SOW_all[[input$TDmetrics[5]]]),max(SOW_all[[input$TDmetrics[5]]])),2), ticks = F
                 )
     
@@ -2555,7 +2565,11 @@ fluidRow(column(width=6, #style='margin-bottom:15px;margin-right: 0px; border:1p
     }),
     renderUI({
     req(length(input$TDmetrics) >=6)
-    sliderInput("TDmetric6", label=paste0(input$TDmetrics[6], " range"), min=round(min(SOW_all[[input$TDmetrics[6]]]),2),
+      
+    my_step=if(str_detect(pattern = "MaxDur.",string = input$TDmetrics[6])){0.5} else{NULL}
+
+    sliderInput("TDmetric6", label=paste0(input$TDmetrics[6], " range"), step = my_step,
+                min=round(min(SOW_all[[input$TDmetrics[6]]]),2),
                 max=round(max(SOW_all[[input$TDmetrics[6]]]), 2), value=round(c(min(SOW_all[[input$TDmetrics[6]]]),max(SOW_all[[input$TDmetrics[6]]])),2), ticks = F
                 )
     
@@ -2563,7 +2577,11 @@ fluidRow(column(width=6, #style='margin-bottom:15px;margin-right: 0px; border:1p
     }),
     renderUI({
     req(length(input$TDmetrics) >=7)
-    sliderInput("TDmetric7", label=paste0(input$TDmetrics[7], " range"), min=round(min(SOW_all[[input$TDmetrics[7]]]),2),
+      
+    my_step=if(str_detect(pattern = "MaxDur.",string = input$TDmetrics[7])){0.5} else{NULL}
+
+    sliderInput("TDmetric7", label=paste0(input$TDmetrics[7], " range"), step = my_step,
+                min=round(min(SOW_all[[input$TDmetrics[7]]]),2),
                 max=round(max(SOW_all[[input$TDmetrics[7]]]), 2), value=round(c(min(SOW_all[[input$TDmetrics[7]]]),max(SOW_all[[input$TDmetrics[7]]])),2), ticks = F
                 )
     
@@ -2594,9 +2612,11 @@ checkboxGroupInput(inputId = "whichBox",label = "Which box(es) to plot", choices
 hr(style="margin-top: 10px; margin-bottom: 10px")
 
 fluidRow(column(width=6,
-                
-       selectizeInput(inputId = "TDpolicyID",label = "Select 1-2 policy(s) to compare", choices = c(1:nrow(wide_data)),
-               options = list(maxItems = 2), selected = NULL, multiple = T, width="90%"),
+
+renderUI({
+  selectizeInput(inputId = "TDpolicyID",label = "Select policy(s) to compare", choices = c(1:nrow(wide_data)),
+               options = list(maxItems = ifelse(input$TDScrollFormat==T, 2, 999)), selected = NULL, multiple = T, width="90%")
+}),
 
 selectInput(inputId = "TDSOWensemble", label = "Choose SOW ensemble", choices = c("cLHS 300", "cLHS 500"), selected = "cLHS 300", width="90%"),
 
@@ -2610,10 +2630,12 @@ renderUI({
 
     dropdownButton(circle = F, label = "Plot settings", width = "120%",
                    
-                   prettyToggle(inputId = "TDDiagonalTF",label_on = "Remove kernel density plots", label_off = "Include kernel density plots", value = T),
+                   prettyToggle(inputId = "TDScrollFormat", label_on = "Plot policies on same scatter plot", label_off = "Plot one scatter plot per policy", value = T),
                    
-                  sliderInput(inputId = "TDlegendx",label = "legend x position", min = -0.5, max = 1,value = 0.1, step = 0.01, width="90%", ticks = F),
-                  sliderInput(inputId = "TDlegendy",label = "legend y position", min = 0.00, max = 1,value = 0.94, step = 0.01, width="90%", ticks = F),      
+                   prettyToggle(inputId = "TDDiagonalTF",label_on = "Remove kernel density plots", label_off = "Include kernel density plots", value = F),
+                   
+                  sliderInput(inputId = "TDlegendx",label = "legend x position", min = 0.0, max = 1,value = 0.05, step = 0.01, width="90%", ticks = F),
+                  sliderInput(inputId = "TDlegendy",label = "legend y position", min = -.5, max = .5,value = -.02, step = 0.01, width="90%", ticks = F),      
                   sliderInput(inputId = "TDscatterLabel", label = "Axis label font size", min = 10, max = 30, value = 16, step = 0.5,width = "90%", ticks = F),
                   sliderInput(inputId = "TDscatterTick", label = "Tick font size", min = 8, max = 26, value = 12, step = 0.5,width = "90%", ticks = F)
          )
@@ -2701,7 +2723,18 @@ renderUI({
       req(length(input$TDObj) >=1 & input$DefaultVulnerability==F)
       actionButton(inputId = "COITD", label = "Apply thresholds & plot", width = "80%")
       
+    }),
+    
+    div(style="margin-top: 20px"),
+    
+    renderUI({
+      
+      req(TD$scatter)
+      
+      downloadButton(outputId = "downloadReport", icon = icon("download"), width="20%", style="margin-botom: 0px; margin-top: 0px", label="Download plots")
+      
     })
+    
     
     
                 )
@@ -2737,6 +2770,12 @@ observe({
   # cat(file=stderr(), 'your name:', UDbox_lims[,1], "\n") # prints dimension to R console
 
 })
+
+# delay the invalidation of plots by slowing down the response time of the observable condition slider inputs
+
+UDbox_lims_delay=reactive({
+  TDcalcs$UDbox_lims
+}) %>% debounce(1000)
 
 observeEvent(input$uploadScenario, {
 
@@ -2776,12 +2815,12 @@ observeEvent(input$uploadScenario, {
 
 
 
-SOW and scenario
+SOW and scenario { style="height:500%;"}
 ----------------------------------
 
 ```{r, calculate COI top-down page}
 
-TDcalcs=reactiveValues()
+TDcalcs=reactiveValues(box_list=list(), scen_names=c())
 
 observeEvent(list(input$DefaultVulnerability,thresholds$objectives,thresholds$thresholds), {
   
@@ -2821,7 +2860,49 @@ observeEvent(input$COITD, { # if Apply button is hit, recalculate TDcalcs
  
 }, ignoreInit = T)
 
-observeEvent(list(TDcalcs$objectives, TDcalcs$thresholds, input$TDpolicyID, input$TDSOWensemble, input$AndOrTD, input$DefaultVulnerability, thresholds$thresholds, thresholds$objectives),{ # calculate COI for selected policies, objectives, and thresholds
+observeEvent(list(input$TDmetrics,input$whichBox,input$TDsaved),{ # find all metrics to plot based on user input
+      
+  
+    all_names=c()
+    
+    if (isTruthy(input$TDmetrics) & (1 %in% input$whichBox)){
+      all_names=input$TDmetrics
+    }
+  
+    # cat(file=stderr(), 'all metrics 1:', all_names, "\n") # prints dimension to R console
+
+    if(isTruthy(input$TDsaved) & (2 %in% input$whichBox)){
+      for(i in 1:length(input$TDsaved)){
+        
+              #cat(file=stderr(), 'saved scenario: ', input$TDsaved[i], "\n") # prints dimension to R console
+        
+              req(isTruthy(TDcalcs$box_list[[input$TDsaved[i]]]))
+              
+              #cat(file=stderr(), 'names 2 ', colnames(TDcalcs$box_list[[input$TDsaved[i]]]), "\n") # prints dimension to R console
+
+        
+        
+        all_names=c(all_names, colnames(TDcalcs$box_list[[input$TDsaved[i]]]))
+        
+      }
+      
+    }      
+    
+    
+    if(length(all_names) == 1 ){ #add a metric so you can plot 1D scenarios
+        all_names[2]="Index"
+      }
+
+    all_names=unique(all_names)  
+    #cat(file=stderr(), 'all metrics FINAL:', all_names, "\n") # prints dimension to R console
+
+    TDcalcs$all_names=all_names
+}, priority = -100)
+
+
+################## calculate COI for selected policies, objectives, and thresholds #################
+
+observeEvent(list(TDcalcs$objectives, TDcalcs$thresholds, input$TDpolicyID, input$TDSOWensemble, input$AndOrTD, input$DefaultVulnerability, thresholds$thresholds, thresholds$objectives, input$TDScrollFormat, input$TDDiagonalTF, TDcalcs$all_names, TDcalcs$box_list, input$ScenarioTable),{ 
   
   req(TDcalcs$objectives)
   req(TDcalcs$thresholds)
@@ -2846,6 +2927,10 @@ observeEvent(list(TDcalcs$objectives, TDcalcs$thresholds, input$TDpolicyID, inpu
   req(length(TDcalcs$objectives)>0)
   req(length(TDcalcs$thresholds)>0)
 
+  
+  if(input$TDScrollFormat==T){# compute COI for two policies displayed on one plot
+    
+  
   TDcalcs$IDaCOI=defineCOI(objectives_names = TDcalcs$objectives, objectives_data = objData, thresholds=TDcalcs$thresholds, AndOrTF = AndOrTF)
 
 
@@ -2864,11 +2949,7 @@ observeEvent(list(TDcalcs$objectives, TDcalcs$thresholds, input$TDpolicyID, inpu
       TDcalcs$IDbCOI=ifelse(temp==1, 1.1, 0) # give a unique number to track that policy B is vulnerable, as opposed to policy A above
       
       temp=rowSums(data.frame(TDcalcs$IDaCOI, TDcalcs$IDbCOI))
-      # cat(file=stderr(), 'your name:', TDcalcs$IDaCOI[1:20], "\n") # prints dimension to R console
-      # cat(file=stderr(), 'your name:', TDcalcs$IDbCOI[1:20], "\n") # prints dimension to R console
-      # 
-      #cat(file=stderr(), 'your name:', temp, "\n") # prints dimension to R console
-      
+
       temp[temp==2.1]="Both vulnerable"
       temp[temp==1]="First policy vulnerable"
       temp[temp==1.1]="Second policy vulnerable"
@@ -2880,18 +2961,152 @@ observeEvent(list(TDcalcs$objectives, TDcalcs$thresholds, input$TDpolicyID, inpu
       
     }
   
+  } # end if (input$TDSCrollFormat==T)
+  
+  ############### if input$TDScrollFormat== F (multiple plots option) ######################
+
+  if(input$TDScrollFormat==F){
+    
+  labelSize=input$TDscatterLabel
+  tickSize=input$TDscatterTick
+  
+  x=input$TDlegendx
+  y=input$TDlegendy
+
+
+  box_lims=TDcalcs$box_list  
+  
+  #cat(file=stderr(), 'n boxes:', length(box_lims), "\n") # prints dimension to R console
+
+  plot_list=list()
+    
+  diagInput=if(input$TDDiagonalTF==T){list(continuous = modified_density)} else {list(continuous = "blankDiag")}
+
+  TDcalcs$table=NULL
+  
+  if(input$TDSOWensemble =="cLHS 300"){
+    SOW=SOW_500_300_100[[2]]$SOW
+  } else {
+    SOW=SOW_500_300_100[[1]]$SOW
+  }
+        
+  if(input$ScenarioTable=="user-defined"){
+     boxID=1
+  } else {
+     boxID=input$ScenarioTable
+  }
+  
+  box=TDcalcs$box_list[[boxID]]
+  # cat(file=stderr(), 'metrics:', colnames(box), "\n") # prints dimension to R console
+          
+  req(box)  
+  ndims=ncol(box)
+
+# loop through policies. Create scatter matrix and compute density, coverage
+  
+  for (i in 1:length(input$TDpolicyID)){
+    
+      objData=dplyr::filter(obj_all, ID == input$TDpolicyID[i])
+  
+        if(input$TDSOWensemble=="cLHS 300"){
+          
+          objData=objData[SOW_500_300_100[[2]]$model,]
+        
+        }
+      
+      COI=defineCOI(objectives_names = TDcalcs$objectives, objectives_data = objData, thresholds=TDcalcs$thresholds, AndOrTF = AndOrTF)
+      
+
+        ####### compute density and coverage ############
+        
+            calcs=matrix(nrow=nrow(SOW), ncol=ndims+1)
+
+            for(n in 1:ndims){ # loop through metrics in box, label within each box dimension range
+              
+              name=colnames(box)[n]
+              
+              calcs[,n]=(SOW[[name]] >= box[[name]][1]) & (SOW[[name]] <= box[[name]][2])
+
+            }
+            
+            if(ndims>1){
+              temp=rowSums(calcs[,1:ndims]) # sum of rows tells you how many dimension of SOW are in the scenario
+          
+            } else {
+              temp=calcs[,1:ndims]
+            }
+          
+
+            calcs[,ndims+1]=ifelse(temp == ndims, 1, 0) # assign 1 if within box
+          
+            temp=calcs[,ndims+1]+COI # if sum is 2, then vulnerable and in scenario
+          
+            density=sum(temp==2)/sum(calcs[,ndims+1]==1) # number of vulnerable points in box/total number of points in box
+            coverage=sum(temp==2)/sum(COI)
+            
+            IDiVector=c(paste0(sum(COI),"/",nrow(SOW)), round(coverage,2), round(density,2))
+
+            if(i==1){
+
+              TDcalcs$table=data.frame(IDiVector)
+              colnames(TDcalcs$table)=paste("ID:", input$TDpolicyID[1])
+              row.names(TDcalcs$table)= c("total vulnerable cases", "coverage", "density")
+            } else {
+              TDcalcs$table=data.frame(TDcalcs$table, IDiVector)
+              colnames(TDcalcs$table)=paste("ID:", input$TDpolicyID[1:i])
+            }
+          
+        ####### end of computing density and coverage
+        
+      Vulnerable=ifelse(COI==1, "Yes", "No")
+      TDcalcs$ensemble$Vulnerable=Vulnerable
+
+      all_names=TDcalcs$all_names
+      if(length(all_names)==1){
+        all_names[2]="Index"
+      }
+      
+      # cat(file=stderr(), 'all_names:', TDcalcs$all_names, "\n") # prints dimension to R console
+      
+      temp=ggpairs(data=TDcalcs$ensemble, columns = all_names,
+        aes(color=Vulnerable, alpha=0.3),
+        lower =  list(continuous=wrap(SD_plot2, box_lims=box_lims, npolicy=1, name_vec=TDcalcs$scen_names)),
+        upper=list(continuous = "blank"), legend=NULL, switch="both", title=NULL,
+        diag = diagInput)+
+        theme(text=element_text(size=labelSize), axis.text.x = element_text(angle=90, size=tickSize), axis.text.y =element_text(size=tickSize))
+
+    if(i==1){ # steal legend on first iteration
+        TDcalcs$temp_TD=temp[2,1] # extract plot to steal legend from
+        temp=temp+ggtitle("Vulnerable SOW")
+    }  
+      
+  
+    if( input$TDDiagonalTF==F){
+        temp=gpairs_lower(temp) # remove extra labels when diagonal not wanted
+    }
+
+    plot_list[[i]]=ggmatrix_gtable(temp) # convert to gtable so plot_grid will work
+
+      
+    } # end policy loop
+  
+  TDcalcs$plot_list=plot_list
+  
+
+  } # end if (input$TDScrollFormat==F)
+    
   
 })
 
 
-observeEvent(list(input$TDsaved, TDcalcs$UDbox_lims, input$whichBox), {
+observeEvent(list(input$TDsaved, UDbox_lims_delay(), input$whichBox), {
 
 TDcalcs$box_list=list()
 TDcalcs$scen_names=c()
 
   if (1 %in% input$whichBox & isTruthy(input$TDmetric1)){ # 1 corresponds to self-defined box
 
-    TDcalcs$box_list[[1]]=TDcalcs$UDbox_lims
+    TDcalcs$box_list[[1]]=UDbox_lims_delay()
     TDcalcs$scen_names[1]="user-defined"
     
   }
@@ -2901,24 +3116,26 @@ TDcalcs$scen_names=c()
     req(input$TDsaved)
     si=length(TDcalcs$box_list)
     for(i in 1:length(input$TDsaved)){
-      
+
       TDcalcs$box_list[[input$TDsaved[i]]]=database$names[[input$TDsaved[i]]]$box_lims
       TDcalcs$scen_names[si+i]=input$TDsaved[i]
     }
 
 
   }
+      # cat(file=stderr(), 'your name:', TDcalcs$scen_names, "\n") # prints dimension to R console
+      # cat(file=stderr(), 'n scenarios:', length(TDcalcs$box_list), "\n") # prints dimension to R console
 
 
 }, ignoreInit = T)
 
+
 ########### calculate summary statistics table #############
 
 
-observeEvent(list(input$ScenarioTable, input$TDpolicyID, TDcalcs$box_list, input$TDSOWensemble
+observeEvent(list(input$ScenarioTable, input$TDpolicyID, TDcalcs$box_list, input$TDSOWensemble, input$COITD
                   ),{
-  #findme
-  
+                    
   req(input$ScenarioTable)
   req(input$TDpolicyID)
   req(TDcalcs$box_list)
@@ -2941,7 +3158,7 @@ observeEvent(list(input$ScenarioTable, input$TDpolicyID, TDcalcs$box_list, input
 
   
   box=TDcalcs$box_list[[boxID]]
-    cat(file=stderr(), 'metrics:', colnames(box), "\n") # prints dimension to R console
+    # cat(file=stderr(), 'metrics:', colnames(box), "\n") # prints dimension to R console
 
   req(box)  
   ndims=ncol(box)
@@ -2978,9 +3195,9 @@ observeEvent(list(input$ScenarioTable, input$TDpolicyID, TDcalcs$box_list, input
   
   IDaVector=c(paste0(sum(TDcalcs$IDaCOI),"/",nrow(SOW)), round(TDcalcs$IDaCoverage,2), round(TDcalcs$IDaDensity,2))
 
-  TDcalcs$table=data.frame(IDaVector)
-  colnames(TDcalcs$table)=paste("ID:", input$TDpolicyID[1])
-  row.names(TDcalcs$table)= c("total vulnerable cases", "coverage", "density")
+  TDcalcs$abtable=data.frame(IDaVector)
+  colnames(TDcalcs$abtable)=paste("ID:", input$TDpolicyID[1])
+  row.names(TDcalcs$abtable)= c("total vulnerable cases", "coverage", "density")
   
   if(length(input$TDpolicyID)>1){
     
@@ -2998,9 +3215,9 @@ observeEvent(list(input$ScenarioTable, input$TDpolicyID, TDcalcs$box_list, input
     
         IDbVector=c(paste0(sum(TDcalcs$IDbCOI==1.1),"/",nrow(SOW)), round(TDcalcs$IDbCoverage,2), round(TDcalcs$IDbDensity,2))
 
-      TDcalcs$table=cbind(IDaVector, IDbVector)
-      colnames(TDcalcs$table)=c(paste("ID:", input$TDpolicyID[1]),paste("ID:", input$TDpolicyID[2]) )
-  row.names(TDcalcs$table)= c("total vulnerable cases", "coverage", "density")
+      TDcalcs$abtable=cbind(IDaVector, IDbVector)
+      colnames(TDcalcs$abtable)=c(paste("ID:", input$TDpolicyID[1]),paste("ID:", input$TDpolicyID[2]) )
+  row.names(TDcalcs$abtable)= c("total vulnerable cases", "coverage", "density")
       
   }
 
@@ -3008,7 +3225,7 @@ observeEvent(list(input$ScenarioTable, input$TDpolicyID, TDcalcs$box_list, input
   #cat(file=stderr(), 'stats', #c(TDcalcs$IDaDensity,TDcalcs$IDaCoverage,TDcalcs$IDbDensity,TDcalcs$IDbCoverage), "\n") # prints dimension to R console
 
 
-})
+}, priority=-100)
 
 
 
@@ -3022,26 +3239,36 @@ observeEvent(list(input$ScenarioTable, input$TDpolicyID, TDcalcs$box_list, input
 ################## prep SOW dataframe ###############
 observeEvent(input$TDSOWensemble, {
       if (input$TDSOWensemble == "cLHS 300"){TDcalcs$ensemble=SOW_500_300_100[[2]]$SOW} else {TDcalcs$ensemble=SOW_500_300_100[[1]]$SOW}
-})
+  
+      TDcalcs$ensemble$Index=1:nrow(TDcalcs$ensemble) ## arbitrary index used for plotting when only 1 observable condition is given
+
+  
+}, ignoreInit = F)
+
+TD=reactiveValues()
 
 renderPlot({
 
-  validate(need(isTruthy(input$TDmetrics[2])| isTruthy(input$TDsaved), "Select at least two observable conditions or select a saved scenario to plot."))
+  validate(need(isTruthy(input$TDmetrics[1])| isTruthy(input$TDsaved), "Select at least one observable condition or select a saved scenario to plot."))
 
-  if(!isTruthy(input$TDmetrics[1]) & isTruthy(input$TDsaved)){
-      box=TDcalcs$box_list[[input$TDsaved]]
-      ndims=ncol(box)
-
-      validate(need(ndims>1, "The selected scenario is 1-dimensional. Please choose another observable condition to plot."))
-    
-
-  }
+  # if(!isTruthy(input$TDmetrics[1]) & isTruthy(input$TDsaved)){
+  #     box=TDcalcs$box_list[[input$TDsaved]]
+  #     ndims=ncol(box)
+  # 
+  #     validate(need(ndims>1, "The selected scenario is 1-dimensional. Please choose another observable condition to plot."))
+  #   
+  # 
+  # }
   
   validate(need(input$TDpolicyID, "Select policy(s)."))
-  validate(need(TDcalcs$IDaCOI, "Define vulnerability on page 1 or to the left."))
+  validate(need( (isTruthy(TDcalcs$IDaCOI) | isTruthy(TDcalcs$plot_list) ), "Define vulnerability on page 1 or to the left."))
   validate(need(isTruthy(input$whichBox), "Select which box(es) to plot."))
 
+  all_names=TDcalcs$all_names
   
+  if(length(all_names) == 1 ){ #add a metric so you can plot 1D scenarios
+        all_names[2]="Index"
+      }
   
   labelSize=input$TDscatterLabel
   tickSize=input$TDscatterTick
@@ -3051,31 +3278,35 @@ renderPlot({
 
 
     box_lims=TDcalcs$box_list
-    
-    ###### get metric names to be plotted ###########
-    
-    all_names=c()
-    if (isTruthy(input$TDmetrics) & (1 %in% input$whichBox)){
-      all_names=input$TDmetrics
-    }
   
-    #cat(file=stderr(), 'all metrics:', all_names, "\n") # prints dimension to R console
 
-    if(isTruthy(input$TDsaved) & (2 %in% input$whichBox)){
-      for(i in 1:length(input$TDsaved)){
-        all_names=c(all_names, colnames(TDcalcs$box_list[[input$TDsaved[i]]]))
-        
-      }
-      
-      if(length(all_names)<2){ #add a metric so you can plot 1D saved scenarios
-        all_names[2]=input$TDmetrics[1]
-      }
-      
-    }
+   #  ###### get metric names to be plotted ###########
+   #  
+   #  all_names=c()
+   #  if (isTruthy(input$TDmetrics) & (1 %in% input$whichBox)){
+   #    all_names=input$TDmetrics
+   #  }
+   # 
+   #  #cat(file=stderr(), 'all metrics:', all_names, "\n") # prints dimension to R console
+   # 
+   #  if(isTruthy(input$TDsaved) & (2 %in% input$whichBox)){
+   #    for(i in 1:length(input$TDsaved)){
+   #      all_names=c(all_names, colnames(TDcalcs$box_list[[input$TDsaved[i]]]))
+   #      
+   #    }
+   #    
+   #    if(length(all_names)<2){ #add a metric so you can plot 1D saved scenarios
+   #      all_names[2]=input$TDmetrics[1]
+   #    }
+   #    
+   #  }
+   #  
+   #  all_names=unique(all_names)
+   #  #cat(file=stderr(), 'all metrics:', all_names, "\n") # prints dimension to R console
+   # #cat(file=stderr(), 'your name:',TDcalcs$scen_names, "\n")
+  
     
-    all_names=unique(all_names)
-    #cat(file=stderr(), 'all metrics:', all_names, "\n") # prints dimension to R console
-   #cat(file=stderr(), 'your name:',TDcalcs$scen_names, "\n")
+  if(input$TDScrollFormat==T){ # plot policies on same scatter plot
   
   if(length(input$TDpolicyID)==1){ # plot for only one policy
   
@@ -3100,7 +3331,7 @@ renderPlot({
     
     Vulnerable=TDcalcs$IDabCOI
     TDcalcs$ensemble$Vulnerable=Vulnerable
-    
+
     pairs_TD=ggpairs(data=TDcalcs$ensemble, columns = all_names,
         aes(color=Vulnerable, shape=Vulnerable, fill=Vulnerable, alpha=0.3),
         lower = list(continuous=wrap(SD_plot2, box_lims=box_lims, npolicy=2, name_vec=TDcalcs$scen_names)),
@@ -3131,14 +3362,90 @@ renderPlot({
         pairs_TD=gpairs_lower(pairs_TD) # remove extra labels when diagonal not wanted
     }
 
-    vp_TD=viewport(width = 1, height=4, x=x, y=y, just = "left") # viewport for COI
-    vp_scenLegend=viewport(width=1, height=2, x=x,y=y-.1, just="left") # viewport for scenario names
-    print(pairs_TD)
+    my_height=1/5.25
+    TD$height=9
+    
+    # if(length(TDcalcs$all_names)>2){
+    #   my_height=my_height*length(TDcalcs$all_names) # make additional space for extra metrics
+    # }
+    # 
+    # if(input$TDDiagonalTF==T ){
+    #    my_height=my_height+4 # add space for diagonal
+    # }
+        
+    vp_main=viewport(width=unit(x=1, units = "npc"), height =unit(x=my_height, units = "npc"), x = 0, y=1, just = c(0,1))
+    vp_TD=viewport(width = 1, height=2, x=x, y=y, just = c(.45,0)) # viewport for COI
+    vp_scenLegend=viewport(width=1, height=2, x=x,y=y-.022, just=  c(.45,0)) # viewport for scenario names
+  
+    # save scatter plot
+    TD$scatter=pairs_TD
+    TD$scatterVP=vp_main
+
+    # Print plots
+    print(pairs_TD, vp=vp_main)
     print(legend_TD, vp=vp_TD)
     print(scen_legend, vp=vp_scenLegend)
 
+  } # end if (input$TDScrollFormat==T)
+    
+    #############################################################################################
+    ######### plot each policy in its own scatter plot, growing in the y direction ##############
+    
+  if(input$TDScrollFormat==F){ 
+  
+    scen_legend=scenario_legend(scen_names=TDcalcs$scen_names, colors=c("black", "red", "purple", "green", "brown", "orange", "yellow", "pink"), size=1)
+    
+   
 
+    temp_TD=TDcalcs$temp_TD #plot to steal legend from
+  
+    temp_TD=temp_TD+theme(legend.key = element_rect(fill = "transparent", colour = "transparent"),
+                  rect = element_rect(fill = "white")) # make legend background transparent
+  
+    legend_TD=get_legend(temp_TD) #steal legend
+    legend_TD=as_ggplot(legend_TD) # convert to ggplot
+  
+    my_height=4*length(TDcalcs$plot_list) #calculate height of plot. Allocate four inches per plot
+    
+    if(length(TDcalcs$all_names)>2){
+      my_height=my_height*length(TDcalcs$all_names) # make additional space for extra metrics
+    }
+    
+    if(input$TDDiagonalTF==T ){
+       my_height=my_height+4 # add space for diagonal
+    }
+        
+    TD$height=my_height
+    
+    vp_main=viewport(width=unit(x=1, units = "npc"), height =unit(x=my_height, units = "inches"), x = 0, y=1, just = c(0,1))
+    vp_TD=viewport(width = 1, height=2, x=x, y=y, just =c(.45,0)) # viewport for COI
+    vp_scenLegend=viewport(width=1, height=2, x=x,y=y-.015, just=c(.45,0)) # viewport for scenario names
+    
+    column_plot=plot_grid(plotlist=TDcalcs$plot_list, ncol=1, align="v", labels = as.character(input$TDpolicyID), vjust=c(1, rep(0.5, length(TDcalcs$plot_list)-1)), label_size = 16)
+    
+    # Save scatter plot
+    TD$scatter=column_plot
+    TD$scatterVP=vp_main
+    
+    # Print plots
+    print(column_plot, vp=vp_main)
+    print(legend_TD, vp=vp_TD)
+    print(scen_legend, vp=vp_scenLegend)
+
+    
+  }  # end if(input$TDScrollFormat==F)
+    
+  ### save legends
+  
+  TD$pointLegend=legend_TD
+  TD$pointVP=vp_TD
+  TD$boxLegend=scen_legend
+  TD$boxVP=vp_scenLegend
+    
+    
 })
+
+
 
 ```
 
@@ -3154,7 +3461,17 @@ absolutePanel(class = "panel panel-default", fixed = T,
                  HTML('<button data-toggle="collapse"  data-target="#boxTD1" class="btn-block btn-primary"></button>'),
    tags$div(id = 'boxTD1', class="collapse in",
 
-      renderTable(TDcalcs$table, rownames = T, colnames = T)
+      renderTable({
+
+        
+        if(input$TDScrollFormat==T){ # plot policies on same scatter plot
+          TDcalcs$abtable
+        } else { # plot policies in separate scatter plots
+          TDcalcs$table
+        }
+        
+        
+        }, rownames = T, colnames = T)
       
       )
 
@@ -3162,6 +3479,42 @@ absolutePanel(class = "panel panel-default", fixed = T,
 
 
 ```
+
+```{r, download report, include=FALSE}
+
+output$downloadReport <- downloadHandler(
+    filename = function() { "Create&ViewScenarios.pdf" },
+    content = function(file) {
+      
+      # open device
+      
+      pdf(file, width = 10, height = TD$height )
+      
+        # create plot
+      
+        print(TD$scatter)
+        
+        # legend position is way off
+        
+        x=input$TDlegendx+.1
+        y=input$TDlegendy*5+.3
+        vp_points=viewport(width = unit(x=1, units = "npc"), height=unit(x=1, units = "npc"), x=unit(x=.8, units="npc"), y=unit(x=.8, units="npc"), just =c(0,0)) # viewport for COI
+        vp_scenLegend=viewport(width=unit(x=1, units = "npc"), height=unit(x=1, units = "npc"), x=unit(.8, units="npc"),y=unit(x=.8, units="npc")-unit(x=1, units="inches"), just=c(0,0)) # viewport for scenario names
+
+        print(TD$pointLegend, vp=vp_points)
+        print(TD$boxLegend, vp=vp_scenLegend)
+
+        # close the device
+      
+        dev.off()
+        
+        #ggsave(file, plot = TD$plot, device = "pdf", dpi=400)
+    }
+)
+
+
+```
+
 
 
 

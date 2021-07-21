@@ -5,8 +5,8 @@ account: nabocrb
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 4046332
-bundleId: 4800551
+bundleId: 4815408
 url: https://nabocrb.shinyapps.io/ScenarioDiscoveryWebApp/
-when: 1625769577.38279
+when: 1626188716.46617
 asMultiple: FALSE
 asStatic: FALSE

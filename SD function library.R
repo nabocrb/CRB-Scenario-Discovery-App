@@ -17,6 +17,8 @@ library(stringr)
 library(forcats) # to order violin plots according to user input
 library(ggnewscale)
 
+if(exists("trigger")){rm("trigger")}
+
 ############################## data ###############################
 
 ### load stress testing data from robustness runs
@@ -429,16 +431,44 @@ boxconverter=function (sdbox){
   dimmat <- matrix(Inf, nrow = sum(sdbox$dimlist$either), 
                    ncol = 2)
   dimmat[, 1] <- -Inf
-  for (i in 1:length(dimvect)) {
-    if (sdbox$dimlist$lower[dimvect[i]]) {
-      dimmat[i, 1] <- sdbox$box[1, dimvect[i]]
+  
+  test_var=length(sdbox$dimlist$lower)
+
+  trigger=0
+  
+        for (i in 1:length(dimvect)) {
+          
+          test_var=sdbox$dimlist$lower[dimvect[i]]
+          #cat(file=stderr(), 'test_var:', test_var, "\n") # prints dimension to R console
+          
+          if(!(test_var %in% c(TRUE, FALSE))){
+            
+            #showNotification("No boxes found. Try different PRIM settings or observable conditions.", type = "error", duration = NULL )
+            
+            trigger=1
+            #cat(file=stderr(), 'function:', "boxconverter", "\n") # prints dimension to R console
+            break
+            
+            }
+            
+            if (sdbox$dimlist$lower[dimvect[i]]) {
+              dimmat[i, 1] <- sdbox$box[1, dimvect[i]]
+            }
+            if (sdbox$dimlist$upper[dimvect[i]]) {
+              dimmat[i, 2] <- sdbox$box[2, dimvect[i]]
+            }
+    
+
+        }
+  
+    if(trigger==1){
+      return(NULL)
+    } else {
+      newbox <- list(dimvect, dimmat)
+      return(newbox)
     }
-    if (sdbox$dimlist$upper[dimvect[i]]) {
-      dimmat[i, 2] <- sdbox$box[2, dimvect[i]]
-    }
-  }
-  newbox <- list(dimvect, dimmat)
-  return(newbox)
+
+  
 }
 
 ######################### nullprob #########################
@@ -557,13 +587,34 @@ pvallister=function (checpts, x, y, trajinf){
   ofboxlist <- list()
   for (boxind in checpts) {
     boxy <- list(box = trajinf$box[[boxind]], dimlist = trajinf$dimlist[[boxind]])
-    ofboxlist[[boxind]] <- boxconverter(boxy)
+    
+    error_check=boxconverter(boxy)
+ 
+    if(is.null(error_check)){
+      
+      trigger=1
+      
+      break
+    } else {
+      ofboxlist[[boxind]] <- boxconverter(boxy)
+    }
+    
   }
-  for (i in checpts) {
-    pvallist[[i]] <- cbind(ofboxlist[[i]][[1]], nullprob(cbind(x, 
-                                                               y), y = NULL, ofboxlist[[i]]))
-  }
-  return(pvallist)
+  
+  if(exists("trigger")){
+    return(NULL)
+    cat(file=stderr(), 'function:', "pvallister", "\n") # prints dimension to R console
+    
+  } else {
+    
+    for (i in checpts) {
+      pvallist[[i]] <- cbind(ofboxlist[[i]][[1]], nullprob(cbind(x, 
+                                                                 y), y = NULL, ofboxlist[[i]]))
+    }
+    return(pvallist)
+   
+  } 
+
 }
 
 ######################### prim #############################
@@ -620,6 +671,14 @@ prim=function(x,y, thresh=NULL, box.init = NULL, peel.alpha = .05, paste.alpha =
     #, so i replaced checpts with 1:length(boxseq$box)
     pvallist <- pvallister(checpts, x, y, trajinf)
     
+    if(is.null(pvallist)){
+      return(NULL)
+      cat(file=stderr(), 'function:', "prim", "\n") # prints dimension to R console
+      
+    } else {
+      
+    
+    
     boxdata=trajinf
     boxdata[["pvals"]]=pvallist
     
@@ -644,6 +703,8 @@ prim=function(x,y, thresh=NULL, box.init = NULL, peel.alpha = .05, paste.alpha =
     
     return(boxdata)
     
+    }
+    
   }
 
 ########################## MO.PRIM ######################################
@@ -665,6 +726,15 @@ prim=function(x,y, thresh=NULL, box.init = NULL, peel.alpha = .05, paste.alpha =
     # }
     
     boxData=prim(x,y, peel_crit = peel_crit, peel.alpha = peel_alpha)
+    
+    if(is.null(boxData)){
+      showNotification("An error has occurred. Please try different PRIM settings or observable conditions.", type="error")
+      cat(file=stderr(), 'function:', "MO.PRIM", "\n") # prints dimension to R console
+      
+      return(NULL)
+      
+    } else {
+    
     pvals=boxData$pvals
     dimlist=boxData$dimlist
     dim_names=names(boxData$dimlist[[1]]$either) # get metric names
@@ -724,6 +794,9 @@ prim=function(x,y, thresh=NULL, box.init = NULL, peel.alpha = .05, paste.alpha =
         for (p in 1:length(pvals)){ # check pvals loop
           
           TF=pvals[[p]] < qp_val # Convert to TF. False means NOT significant
+          if(is.null(dim(TF))){
+            TF=matrix(TF)
+          }
           number_insignificant_dimensions=sum((rowSums(TF)<1)) # where the row sum is less than 1, none of the box constrainsts on that dimension are significant. By summing, you know how many dimensions are insignificant
           
           if (number_insignificant_dimensions > 0){
@@ -863,9 +936,11 @@ prim=function(x,y, thresh=NULL, box.init = NULL, peel.alpha = .05, paste.alpha =
       
     }
     
+    showNotification("Plotting")
     
     return(list(box.metrics=box.metrics[,-4], box.info=box.info))
     
+    } # end if else
     
   }  
   
@@ -1138,7 +1213,7 @@ prim=function(x,y, thresh=NULL, box.init = NULL, peel.alpha = .05, paste.alpha =
     
     my_size=1
     
-    cat(file=stderr(), 'box_lims', length(box_lims), "\n")
+    # cat(file=stderr(), 'box_lims', length(box_lims), "\n")
 
 
     # draw scatter plot, no scenarios 
