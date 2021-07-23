@@ -12,6 +12,7 @@ runtime: shiny
 
 ---
 
+
 ```{r setup, include=FALSE}
 
 # my sdprim wrapper function
@@ -495,7 +496,7 @@ bsTooltip(id = "openManualThresh", title = "Instead of interacting with the viol
 
 hr(style="margin-botom: 0px; margin-top: 0px; margin-left: -10px", width="110%")
 
-update=reactiveValues(thresholds=0, PRIMalg=0, ensemble=0, policy=0, policy2=0, thresholds2=0, ensemble2=0, AndOr=0, AndOr2=0, currentEnsemble="cLHS 500", currentAlg=F, currentPolicy=1, currentAndOr="Or") # used to place asterisks on plots and tables that need updated, and the corresponding buttons to perform the update
+update=reactiveValues(thresholds=0, PRIMalg=0, ensemble=0, policy=0, policy2=0, thresholds2=0, ensemble2=0, AndOr=0, AndOr2=0, metrics=0, currentEnsemble="cLHS 300", currentAlg=F, currentPolicy=1, currentAndOr="Or") # used to place asterisks on plots and tables that need updated, and the corresponding buttons to perform the update
 
 observeEvent(input$policyID !=update$currentPolicy, { # want to ignore initiliaztion for the update trigger
   
@@ -644,6 +645,7 @@ plotlyOutput("VP")
 ```{r, add thresholds to violin plots}
 
 thresholds=reactiveValues(objectives=NA, thresholds=NA, ManualThresholdsTrigger=0)
+
 
 observeEvent(eventExpr = event_data("plotly_relayout", source = "VP"),{
   
@@ -1085,9 +1087,9 @@ observeEvent(list(input$policyID, input$SOWensemble) , {
 ```{r, user interface, include=TRUE}
 
 
-observeEvent( list(update$thresholds2, update$PRIMalg, update$ensemble2, update$policy2, update$AndOr2) ,{
+observeEvent( list(update$thresholds2, update$PRIMalg, update$ensemble2, update$policy2, update$AndOr2, update$metrics) ,{
 
-  update$SDButton=ifelse(sum(update$thresholds2, update$PRIMalg, update$ensemble2, update$policy2, update$AndOr2)>0,
+  update$SDButton=ifelse(sum(update$thresholds2, update$PRIMalg, update$ensemble2, update$policy2, update$AndOr2, update$metrics)>0,
          "*Perform scenario discovery",
                          "Perform scenario discovery")
 
@@ -1331,6 +1333,10 @@ observeEvent(x$switchTrigger==1,{
   
 })
 
+observeEvent(x$keep,{ # trigger *asterisks* to appear on page 2 so user knows inputs to SD have changed
+  update$metrics=1
+}, ignoreInit = T)
+
 observeEvent(list(input$manualMetricSelectionTF, input$manualSelection),{
   
   x$keep=input$manualSelection
@@ -1473,6 +1479,7 @@ observeEvent(input$SDButton, {
     update$ensemble2=0
     update$policy2=0
     update$AndOr2=0
+    update$metrics=0
     
 })
 
@@ -1482,9 +1489,9 @@ observeEvent(input$SDButton, {
 
 ```{r, peeling trajectory}
 
-observeEvent( list(update$thresholds2, update$ensemble2, update$PRIMalg, update$policy2, update$AndOr2) ,{
+observeEvent( list(update$thresholds2, update$ensemble2, update$PRIMalg, update$policy2, update$AndOr2, update$metrics) ,{
 
-  update$PTtitle=ifelse(sum(update$thresholds2, update$ensemble2, update$PRIMalg, update$policy2, update$AndOr2) > 0,
+  update$PTtitle=ifelse(sum(update$thresholds2, update$ensemble2, update$PRIMalg, update$policy2, update$AndOr2, update$metrics) > 0,
   "*Peeling trajectory*",
   "Peeling trajectory"
   )
@@ -2495,6 +2502,7 @@ Inputs {.sidebar data-width=500}
 
 ```{r top-down scenario inputs}
 
+shinyjs::useShinyjs(rmd=T)
 
 fluidRow(column(width=6, #style='margin-bottom:15px;margin-right: 0px; border:1px solid; padding: 10px;',
       
@@ -2620,7 +2628,7 @@ renderUI({
 
 selectInput(inputId = "TDSOWensemble", label = "Choose SOW ensemble", choices = c("cLHS 300", "cLHS 500"), selected = "cLHS 300", width="90%"),
 
-  prettyToggle(inputId = "DefaultVulnerability", label_on = "Use vulnerabilities defined on page 1",label_off = "Define vulnerability here", value = T),
+  prettyToggle(inputId = "DefaultVulnerability", label_on = "Use vulnerabilities from page 1",label_off = "Define vulnerability here", value = T),
 
 renderUI({
   req(TDcalcs$scen_names)
@@ -2630,7 +2638,7 @@ renderUI({
 
     dropdownButton(circle = F, label = "Plot settings", width = "120%",
                    
-                   prettyToggle(inputId = "TDScrollFormat", label_on = "Plot policies on same scatter plot", label_off = "Plot one scatter plot per policy", value = T),
+                   prettyToggle(inputId = "TDScrollFormat", label_on = "Plot policies on same scatter plot", label_off = "Plot one scatter plot per policy", value = F),
                    
                    prettyToggle(inputId = "TDDiagonalTF",label_on = "Remove kernel density plots", label_off = "Include kernel density plots", value = F),
                    
@@ -2653,74 +2661,173 @@ renderUI({
     
     
     renderUI({
-      req(input$DefaultVulnerability==F)
-      selectInput("TDObj",label="Select objectives", multiple = T, choices=colnames(obj_all)[-c(1,2)])
+    
+
+    if(input$DefaultVulnerability==F){my_selection=NULL
+      } else if (isTruthy(thresholds$objectives) & input$DefaultVulnerability==T){
+      my_selection=thresholds$objectives
+      } else {
+        my_selection=NULL
+      }
       
+      selectInput("TDObj",label="Select objectives", multiple = T, choices=colnames(obj_all)[-c(1,2)], selected = my_selection)
+
     }),
     
     renderUI({
-      req(input$DefaultVulnerability==F)
-      radioButtons(inputId = "AndOrTD", label = "Condition for multiple objectives", choices = c("Or", "And"), inline = T)
+
+      if(input$DefaultVulnerability==F){my_selection=NULL
+      } else if (input$DefaultVulnerability==T){
+      my_selection=input$AndOr
+      } else {
+        my_selection=NULL
+      }
+      
+      radioButtons(inputId = "AndOrTD", label = "Condition for multiple objectives", choices = c("Or", "And"), inline = T, selected = my_selection)
     
     }), 
      
      
     renderUI({
-    req(length(input$TDObj) >=1 & input$DefaultVulnerability==F)
+    req(length(input$TDObj) >=1)
+    
+# logic to render sliders with same values from Page 1 if default vulnerability thresholds are used
+      if(input$DefaultVulnerability==F){ # if false, initialize with max value
+        my_selection=max(obj_all[[input$TDObj[1]]])
+      } else if (input$DefaultVulnerability==T){ # if true, initialize with same value as page 1
+        my_selection=thresholds$thresholds[1]
+      } else {
+        my_selection=max(obj_all[[input$TDObj[1]]])
+      }
+      
+      
     sliderInput("TDThresh1", label=paste0(input$TDObj[1], " threshold"), min=min(obj_all[[input$TDObj[1]]]),
-                max=max(obj_all[[input$TDObj[1]]]), value=max(obj_all[[input$TDObj[1]]]), ticks = F)
+                max=max(obj_all[[input$TDObj[1]]]), value=my_selection, ticks = F)
     }),
     
     renderUI({
-    req(length(input$TDObj) >=2 & input$DefaultVulnerability==F)
+    req(length(input$TDObj) >=2)
+      
+        if(input$DefaultVulnerability==F){
+        my_selection=max(obj_all[[input$TDObj[2]]])
+      } else if (input$DefaultVulnerability==T){
+        my_selection=thresholds$thresholds[2]
+      } else {
+        my_selection=max(obj_all[[input$TDObj[2]]])
+      }
+      
     sliderInput("TDThresh2", label=paste0(input$TDObj[2], " threshold"), min=min(obj_all[[input$TDObj[2]]]),
-                max=max(obj_all[[input$TDObj[2]]]), value=max(obj_all[[input$TDObj[2]]]), ticks = F)
+                max=max(obj_all[[input$TDObj[2]]]), value=my_selection, ticks = F)
     }),
     
     renderUI({
-    req(length(input$TDObj) >=3 & input$DefaultVulnerability==F)
+    req(length(input$TDObj) >=3)
+      
+        if(input$DefaultVulnerability==F){
+        my_selection=max(obj_all[[input$TDObj[3]]])
+      } else if (input$DefaultVulnerability==T){
+        my_selection=thresholds$thresholds[3]
+      } else {
+        my_selection=max(obj_all[[input$TDObj[3]]])
+      }
+      
     sliderInput("TDThresh3", label=paste0(input$TDObj[3], " threshold"), min=min(obj_all[[input$TDObj[3]]]),
-                max=max(obj_all[[input$TDObj[3]]]), value=max(obj_all[[input$TDObj[3]]]), ticks = F)
+                max=max(obj_all[[input$TDObj[3]]]), value=my_selection, ticks = F)
     }),
     
     renderUI({
-    req(length(input$TDObj) >=4 & input$DefaultVulnerability==F)
+    req(length(input$TDObj) >=4)
+      
+        if(input$DefaultVulnerability==F){
+        my_selection=max(obj_all[[input$TDObj[4]]])
+      } else if (input$DefaultVulnerability==T){
+        my_selection=thresholds$thresholds[4]
+      } else {
+        my_selection=max(obj_all[[input$TDObj[4]]])
+      }
+      
     sliderInput("TDThresh4", label=paste0(input$TDObj[4], " threshold"), min=min(obj_all[[input$TDObj[4]]]),
-                max=max(obj_all[[input$TDObj[4]]]), value=max(obj_all[[input$TDObj[4]]]), ticks = F)
+                max=max(obj_all[[input$TDObj[4]]]), value=my_selection, ticks = F)
     }),
     
     renderUI({
-    req(length(input$TDObj) >=5 & input$DefaultVulnerability==F)
+    req(length(input$TDObj) >=5)
+      
+        if(input$DefaultVulnerability==F){
+        my_selection=max(obj_all[[input$TDObj[5]]])
+      } else if (input$DefaultVulnerability==T){
+        my_selection=thresholds$thresholds[5]
+      } else {
+        my_selection=max(obj_all[[input$TDObj[5]]])
+      }
+      
     sliderInput("TDThresh5", label=paste0(input$TDObj[5], " threshold"), min=min(obj_all[[input$TDObj[5]]]),
-                max=max(obj_all[[input$TDObj[5]]]), value=max(obj_all[[input$TDObj[5]]]), ticks = F)
+                max=max(obj_all[[input$TDObj[5]]]), value=my_selection, ticks = F)
     }),
 
     renderUI({
-    req(length(input$TDObj) >=6 & input$DefaultVulnerability==F)
+    req(length(input$TDObj) >=6)
+      
+      if(input$DefaultVulnerability==F){
+        my_selection=max(obj_all[[input$TDObj[6]]])
+      } else if (input$DefaultVulnerability==T){
+        my_selection=thresholds$thresholds[6]
+      } else {
+        my_selection=max(obj_all[[input$TDObj[6]]])
+      }
+      
+      
     sliderInput("TDThresh6", label=paste0(input$TDObj[6], " threshold"), min=min(obj_all[[input$TDObj[6]]]),
-                max=max(obj_all[[input$TDObj[6]]]), value=max(obj_all[[input$TDObj[6]]]), ticks = F)
+                max=max(obj_all[[input$TDObj[6]]]), value=my_selection, ticks = F)
     }),
 
     renderUI({
-    req(length(input$TDObj) >=7 & input$DefaultVulnerability==F)
+    req(length(input$TDObj) >=7)
+      
+       if(input$DefaultVulnerability==F){
+        my_selection=max(obj_all[[input$TDObj[7]]])
+      } else if (input$DefaultVulnerability==T){
+        my_selection=thresholds$thresholds[7]
+      } else {
+        my_selection=max(obj_all[[input$TDObj[7]]])
+      }
+      
     sliderInput("TDThresh7", label=paste0(input$TDObj[7], " threshold"), min=min(obj_all[[input$TDObj[7]]]),
-                max=max(obj_all[[input$TDObj[7]]]), value=max(obj_all[[input$TDObj[7]]]), ticks = F)
+                max=max(obj_all[[input$TDObj[7]]]), value=my_selection, ticks = F)
     }),
 
     renderUI({
-    req(length(input$TDObj) >=8 & input$DefaultVulnerability==F)
+    req(length(input$TDObj) >=8)
+      
+      if(input$DefaultVulnerability==F){
+        my_selection=max(obj_all[[input$TDObj[8]]])
+      } else if (input$DefaultVulnerability==T){
+        my_selection=thresholds$thresholds[8]
+      } else {
+        my_selection=max(obj_all[[input$TDObj[8]]])
+      }
+      
     sliderInput("TDThresh8", label=paste0(input$TDObj[8], " threshold"), min=min(obj_all[[input$TDObj[8]]]),
-                max=max(obj_all[[input$TDObj[8]]]), value=max(obj_all[[input$TDObj[8]]]), ticks = F)
+                max=max(obj_all[[input$TDObj[8]]]), value=my_selection, ticks = F)
     }),
 
     renderUI({
-    req(length(input$TDObj) >=9 & input$DefaultVulnerability==F)
+    req(length(input$TDObj) >=9)
+      
+       if(input$DefaultVulnerability==F){
+        my_selection=max(obj_all[[input$TDObj[9]]])
+      } else if (input$DefaultVulnerability==T){
+        my_selection=thresholds$thresholds[9]
+      } else {
+        my_selection=max(obj_all[[input$TDObj[9]]])
+      }
+      
     sliderInput("TDThresh9", label=paste0(input$TDObj[9], " threshold"), min=min(obj_all[[input$TDObj[9]]]),
-                max=max(obj_all[[input$TDObj[9]]]), value=max(obj_all[[input$TDObj[9]]]), ticks = F)
+                max=max(obj_all[[input$TDObj[9]]]), value=my_selection, ticks = F)
     }),
     
     renderUI({
-      req(length(input$TDObj) >=1 & input$DefaultVulnerability==F)
+      req(length(input$TDObj) >=1)
       actionButton(inputId = "COITD", label = "Apply thresholds & plot", width = "80%")
       
     }),
@@ -2740,6 +2847,91 @@ renderUI({
                 )
 )
 
+
+observe({
+
+req(input$DefaultVulnerability)
+
+shinyjs::useShinyjs(rmd=T)
+
+  time=if(!isTruthy(input$TDObj)){3000} else {3000+1000*(length(input$TDObj)-1)}
+
+  if(input$DefaultVulnerability==T){
+
+    delay(time,disable("TDObj")) # must delay the disable function such that the button renders first
+    delay(time,disable("TDThresh1"))
+    delay(time,disable("AndOrTD"))
+    delay(time, disable("COITD"))
+    
+    
+    req(thresholds$thresholds[2])
+    delay(time,disable("TDThresh2"))
+    
+    req(thresholds$thresholds[3])
+    delay(time,disable("TDThresh3"))
+    
+    req(thresholds$thresholds[4])
+    delay(time,disable("TDThresh4"))
+    
+    req(thresholds$thresholds[5])
+    delay(time,disable("TDThresh5"))
+    
+    req(thresholds$thresholds[6])
+    delay(time,disable("TDThresh6"))
+    
+    req(thresholds$thresholds[7])
+    delay(time,disable("TDThresh7"))
+    
+    req(thresholds$thresholds[8])
+    delay(time,disable("TDThresh8"))
+    
+    req(thresholds$thresholds[9])
+    delay(time,disable("TDThresh9"))
+    
+
+
+  }
+
+
+  if(input$DefaultVulnerability==F){
+
+    delay(time,enable("TDObj"))
+    delay(time,enable("TDThresh1"))
+    delay(time,enable("AndOrTD"))
+    delay(time, enable("COITD"))
+
+    req(thresholds$thresholds[2])
+    delay(time,enable("TDThresh2"))
+    
+    req(thresholds$thresholds[3])
+    delay(time,enable("TDThresh3"))
+    
+    req(thresholds$thresholds[4])
+    delay(time,enable("TDThresh4"))
+    
+    req(thresholds$thresholds[5])
+    delay(time,enable("TDThresh5"))
+    
+    req(thresholds$thresholds[6])
+    delay(time,enable("TDThresh6"))
+    
+    req(thresholds$thresholds[7])
+    delay(time,enable("TDThresh7"))
+    
+    req(thresholds$thresholds[8])
+    delay(time,enable("TDThresh8"))
+    
+    req(thresholds$thresholds[9])
+    delay(time,enable("TDThresh9"))
+
+  }
+
+
+
+})
+
+
+bsTooltip(id = "TDScrollFormat", title = "WARNING!!!! By changing the plot format, the -Select policy(s) to compare- input will be cleared. If you want to switch the plot format, please remember the policy IDs and reenter them above.", placement = "right", options =list(container="body") )
 
 
 ```
@@ -3133,8 +3325,8 @@ TDcalcs$scen_names=c()
 ########### calculate summary statistics table #############
 
 
-observeEvent(list(input$ScenarioTable, input$TDpolicyID, TDcalcs$box_list, input$TDSOWensemble, input$COITD
-                  ),{
+observeEvent(list(input$ScenarioTable, input$TDpolicyID, TDcalcs$box_list, input$TDSOWensemble, input$COITD,
+                  thresholds$thresholds, thresholds$objectives),{
                     
   req(input$ScenarioTable)
   req(input$TDpolicyID)
