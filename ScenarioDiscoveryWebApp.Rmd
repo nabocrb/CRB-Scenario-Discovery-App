@@ -322,7 +322,7 @@ fluidRow(column(width=11, offset = 1,
 
 absolutePanel(
   
-  actionButton(inputId = "RobustnessApp",label = "Open robustness app", onclick="location.href='https://nabocrb.shinyapps.io/CRB-Robustness-App-Shiny-Contest';", width = "110%"),
+  actionButton(inputId = "RobustnessApp",label = "Open robustness app", onclick="location.href='https://nabocrb.shinyapps.io/CRB-Robustness-App-JWRPM';", width = "110%"),
   
   class = "panel panel-default", fixed = T,
                 draggable = TRUE, top = "auto", bottom=20, left = 10, right = "auto",
