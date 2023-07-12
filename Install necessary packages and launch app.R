@@ -1,6 +1,7 @@
 # Install necessary packages and launch scenario discovery app, locally (will open in web browser)
 
 packages=c(
+  'flexdashboard',
   "nsga2R",
   'dplyr',
   'ggplot2',
